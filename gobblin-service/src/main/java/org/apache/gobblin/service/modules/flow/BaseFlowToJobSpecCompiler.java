@@ -271,7 +271,7 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
    * @param objects
    * @return
    */
-  public  URI jobSpecURIGenerator(Object... objects) {
+  public static URI jobSpecURIGenerator(Object... objects) {
     return ((FlowSpec)objects[0]).getUri();
   }
 

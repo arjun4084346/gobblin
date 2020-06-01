@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.Future;
 
+import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -32,13 +34,11 @@ import com.google.common.base.Throwables;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-import kafka.utils.ZkUtils;
 import kafka.admin.AdminUtils;
 import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
 
 import org.apache.gobblin.configuration.ConfigurationException;
 import org.apache.gobblin.util.ConfigUtils;
@@ -56,10 +56,9 @@ import org.apache.gobblin.writer.WriteResponseMapper;
  *
  */
 @Slf4j
-public class Kafka09DataWriter<K, V> implements KafkaDataWriter<K, V> {
-
-
-  public static final WriteResponseMapper<RecordMetadata> WRITE_RESPONSE_WRAPPER =
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper=false)
+public class Kafka09DataWriter<K, V> implements AsyncDataWriter<V> {
+    public static final WriteResponseMapper<RecordMetadata> WRITE_RESPONSE_WRAPPER =
       new WriteResponseMapper<RecordMetadata>() {
 
         @Override
@@ -84,6 +83,7 @@ public class Kafka09DataWriter<K, V> implements KafkaDataWriter<K, V> {
       };
 
   private final Producer<K, V> producer;
+  @EqualsAndHashCode.Include
   private final String topic;
   private final KafkaWriterCommonConfig commonConfig;
 
@@ -153,7 +153,7 @@ public class Kafka09DataWriter<K, V> implements KafkaDataWriter<K, V> {
 	  this.producer.flush();
   }
 
-  private void provisionTopic(String topicName, Config config) {
+  private void provisionTopic(String topicName,Config config) {
     String zooKeeperPropKey = KafkaWriterConfigurationKeys.CLUSTER_ZOOKEEPER;
     if (!config.hasPath(zooKeeperPropKey)) {
       log.debug("Topic " + topicName + " is configured without the partition and replication");

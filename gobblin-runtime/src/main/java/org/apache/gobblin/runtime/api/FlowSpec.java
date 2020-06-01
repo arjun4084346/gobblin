@@ -206,15 +206,15 @@ public class FlowSpec implements Configurable, Spec {
 
     public URI getDefaultFlowCatalogURI() {
       try {
-        return new URI(DEFAULT_FLOW_CATALOG_SCHEME, null, "/", null, null);
+        return new URI(DEFAULT_FLOW_CATALOG_SCHEME, Utils.URI_AUTHORITY, Utils.URI_PATH_SEPARATOR, Utils.URI_QUERY, Utils.URI_FRAGMENT);
       } catch (URISyntaxException e) {
         // should not happen
-        throw new Error("Unexpected exception: " + e, e);
+        throw new Error("Unexpected exception: ", e);
       }
     }
 
     public URI getFlowCatalogURI() {
-      if (! this.flowCatalogURI.isPresent()) {
+      if (!this.flowCatalogURI.isPresent()) {
         this.flowCatalogURI = Optional.of(getDefaultFlowCatalogURI());
       }
       return this.flowCatalogURI.get();
@@ -231,20 +231,19 @@ public class FlowSpec implements Configurable, Spec {
           "default";
       try {
         return new URI(flowCatalogURI.getScheme(), flowCatalogURI.getAuthority(),
-            "/" + group + "/" + name, null, null);
+            Utils.createUriPath(group, name), Utils.URI_QUERY, Utils.URI_FRAGMENT);
       } catch (URISyntaxException e) {
         throw new RuntimeException("Unable to create default FlowSpec URI:" + e, e);
       }
     }
 
     public URI getURI() {
-      if (! this.uri.isPresent()) {
+      if (!this.uri.isPresent()) {
         this.uri = Optional.of(getDefaultURI());
       }
 
       return this.uri.get();
     }
-
 
     public FlowSpec.Builder withVersion(String version) {
       Preconditions.checkNotNull(version);
@@ -376,20 +375,25 @@ public class FlowSpec implements Configurable, Spec {
 
   @Slf4j
   public static class Utils {
-    private final static String URI_SCHEME = "gobblin-flow";
     private final static String URI_AUTHORITY = null;
     private final static String URI_PATH_SEPARATOR = "/";
     private final static String URI_QUERY = null;
     private final static String URI_FRAGMENT = null;
     private final static int EXPECTED_NUM_URI_PATH_TOKENS = 3;
 
-    public static URI createFlowSpecUri(FlowId flowId)
-        throws URISyntaxException {
-      return new URI(URI_SCHEME, URI_AUTHORITY, createUriPath(flowId), URI_QUERY, URI_FRAGMENT);
+    public static URI createFlowSpecUri(FlowId flowId) throws URISyntaxException {
+      String flowGroup = flowId.getFlowGroup();
+      String flowName = flowId.getFlowName();
+      FlowSpec.builder();
+      return new URI(Builder.DEFAULT_FLOW_CATALOG_SCHEME, URI_AUTHORITY, createUriPath(flowGroup, flowName), URI_QUERY, URI_FRAGMENT);
     }
 
-    private static String createUriPath(FlowId flowId) {
-      return URI_PATH_SEPARATOR + flowId.getFlowGroup() + URI_PATH_SEPARATOR + flowId.getFlowName();
+    public static URI createFlowSpecUri(String flowGroup, String flowName) throws URISyntaxException {
+      return new URI(Builder.DEFAULT_FLOW_CATALOG_SCHEME, URI_AUTHORITY, createUriPath(flowGroup, flowName), URI_QUERY, URI_FRAGMENT);
+    }
+
+    private static String createUriPath(String flowGroup, String flowName) {
+      return URI_PATH_SEPARATOR + flowGroup + URI_PATH_SEPARATOR + flowName;
     }
 
     /**
