@@ -101,6 +101,7 @@ public class JobContext implements Closeable {
   // State store for persisting job states
   @Getter(AccessLevel.PACKAGE)
   private final DatasetStateStore datasetStateStore;
+  private boolean bootstrapMode;
 
   // Store for runtime job execution information
   private final Optional<JobHistoryStore> jobHistoryStoreOptional;
@@ -152,7 +153,12 @@ public class JobContext implements Closeable {
 
     this.jobState = new JobState(jobPropsState, this.jobName, this.jobId);
     this.jobState.setBroker(this.jobBroker);
-    this.jobState.setWorkUnitAndDatasetStateFunctional(new CombinedWorkUnitAndDatasetStateGenerator(this.datasetStateStore, this.jobName));
+
+    this.bootstrapMode = jobPropsState.getPropAsBoolean(ConfigurationKeys.BOOTSTRAP_MODE_KEY, false);
+
+    this.jobState.setWorkUnitAndDatasetStateFunctional(bootstrapMode
+          ? new NoopWorkUnitAndDatasetStateGenerator()
+          : new CombinedWorkUnitAndDatasetStateGenerator(this.datasetStateStore, this.jobName));
 
     stagingDirProvided = this.jobState.contains(ConfigurationKeys.WRITER_STAGING_DIR);
     outputDirProvided = this.jobState.contains(ConfigurationKeys.WRITER_OUTPUT_DIR);

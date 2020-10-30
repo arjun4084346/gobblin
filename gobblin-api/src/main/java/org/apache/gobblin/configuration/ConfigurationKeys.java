@@ -58,6 +58,7 @@ public class ConfigurationKeys {
   // are the job.state files stored using the state store?
   public static final String JOB_STATE_IN_STATE_STORE = "state.store.jobStateInStateStore";
   public static final boolean DEFAULT_JOB_STATE_IN_STATE_STORE = false;
+  public static final String BOOTSTRAP_MODE_KEY = "bootstrap.mode";
 
   public static final String CONFIG_RUNTIME_PREFIX = "gobblin.config.runtime.";
   // Root directory where task state files are stored
