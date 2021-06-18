@@ -159,6 +159,8 @@ public class KafkaAvroJobStatusMonitor extends KafkaJobStatusMonitor {
       default:
         return null;
     }
+
+    properties.put(JobStatusRetriever.TIMESTAMP_FIELD, event.getTimestamp().toString());
     return new org.apache.gobblin.configuration.State(properties);
   }
 

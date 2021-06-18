@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -167,22 +166,27 @@ public abstract class KafkaJobStatusMonitor extends HighLevelConsumer<byte[], by
     String jobGroup = jobStatus.getProp(TimingEvent.FlowEventConstants.JOB_GROUP_FIELD);
     String storeName = jobStatusStoreName(flowGroup, flowName);
     String tableName = jobStatusTableName(flowExecutionId, jobGroup, jobName);
+    String currentStatus = jobStatus.getProp(JobStatusRetriever.EVENT_NAME_FIELD);
+    String newStatus = currentStatus;
 
     List<org.apache.gobblin.configuration.State> states = stateStore.getAll(storeName, tableName);
     if (states.size() > 0) {
-      String previousStatus = states.get(states.size() - 1).getProp(JobStatusRetriever.EVENT_NAME_FIELD);
-      String currentStatus = jobStatus.getProp(JobStatusRetriever.EVENT_NAME_FIELD);
+      org.apache.gobblin.configuration.State previousState = states.get(states.size() - 1);
+      String previousStatus = previousState.getProp(JobStatusRetriever.EVENT_NAME_FIELD);
 
       // PENDING_RESUME is allowed to override, because it happens when a flow is being resumed from previously being failed
       if (previousStatus != null && currentStatus != null && !currentStatus.equals(ExecutionStatus.PENDING_RESUME.name())
         && ORDERED_EXECUTION_STATUSES.indexOf(ExecutionStatus.valueOf(currentStatus)) < ORDERED_EXECUTION_STATUSES.indexOf(ExecutionStatus.valueOf(previousStatus))) {
         log.warn(String.format("Received status %s when status is already %s for flow (%s, %s, %s), job (%s, %s)",
             currentStatus, previousStatus, flowGroup, flowName, flowExecutionId, jobGroup, jobName));
-        jobStatus = mergeState(states.get(states.size() - 1), jobStatus);
+        newStatus = previousStatus;
       } else {
-        jobStatus = mergeState(jobStatus, states.get(states.size() - 1));
+        newStatus = currentStatus;
       }
+      jobStatus = mergeState(previousState, jobStatus);
     }
+
+    jobStatus.setProp(JobStatusRetriever.EVENT_NAME_FIELD, newStatus);
 
     modifyStateIfRetryRequired(jobStatus);
 
@@ -200,20 +204,24 @@ public abstract class KafkaJobStatusMonitor extends HighLevelConsumer<byte[], by
   }
 
   /**
-   * Merge states based on precedence defined by {@link #ORDERED_EXECUTION_STATUSES}.
-   * The state instance in the 1st argument reflects the more recent state of a job
-   * (and is thus, given higher priority) compared to the 2nd argument.
-   * @param state higher priority state
-   * @param fallbackState lower priority state
+   * Merge states giving precedence to the state with higher timestamp.
+   * @param state1 first state
+   * @param state2 second state
    * @return merged state
    */
-  private static org.apache.gobblin.configuration.State mergeState(org.apache.gobblin.configuration.State state,
-      org.apache.gobblin.configuration.State fallbackState) {
+  private static org.apache.gobblin.configuration.State mergeState(org.apache.gobblin.configuration.State state1,
+      org.apache.gobblin.configuration.State state2) {
     Properties mergedState = new Properties();
+    long timestamp1 = Long.parseLong(state1.getProp(JobStatusRetriever.TIMESTAMP_FIELD, "-1"));
+    long timestamp2 = Long.parseLong(state2.getProp(JobStatusRetriever.TIMESTAMP_FIELD, "-1"));
 
-    mergedState.putAll(fallbackState.getProperties());
-    mergedState.putAll(state.getProperties());
-
+    if (timestamp1 > timestamp2) {
+      mergedState.putAll(state2.getProperties());
+      mergedState.putAll(state1.getProperties());
+    } else {
+      mergedState.putAll(state1.getProperties());
+      mergedState.putAll(state2.getProperties());
+    }
     return new org.apache.gobblin.configuration.State(mergedState);
   }
 
