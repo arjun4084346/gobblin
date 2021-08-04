@@ -264,7 +264,7 @@ class HelixRetriggeringJobCallable implements Callable {
 
       try {
         if (planningJobIdFromStore.isPresent() && !canRun(planningJobIdFromStore.get(), planningJobManager)) {
-          return;
+          return; // add a metric here
         }
 
         log.info("Planning job for {} does not exist. First time run.", this.jobUri);
@@ -332,7 +332,7 @@ class HelixRetriggeringJobCallable implements Callable {
       if (startTime != 0) {
         this.planningJobLauncherMetrics.updateTimeForFailedPlanningJobs(startTime);
       }
-      log.error("Failed to run planning job for {}", this.jobUri, e);
+      log.error("Failed to run planning job for {}", this.jobUri, e); // add metric here
       throw new JobException("Failed to run planning job for " + this.jobUri, e);
     } finally {
       try {
