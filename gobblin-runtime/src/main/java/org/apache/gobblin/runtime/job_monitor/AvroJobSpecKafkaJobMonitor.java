@@ -40,6 +40,7 @@ import org.apache.gobblin.runtime.api.JobSpecMonitor;
 import org.apache.gobblin.runtime.api.JobSpecMonitorFactory;
 import org.apache.gobblin.runtime.api.MutableJobCatalog;
 import org.apache.gobblin.runtime.job_spec.AvroJobSpec;
+import org.apache.gobblin.util.ConfigUtils;
 import org.apache.gobblin.util.reflection.GobblinConstructorUtils;
 
 
@@ -111,7 +112,7 @@ public class AvroJobSpecKafkaJobMonitor extends KafkaAvroJobMonitor<AvroJobSpec>
     Properties props = new Properties();
     props.putAll(record.getProperties());
     jobSpecBuilder.withJobCatalogURI(record.getUri()).withVersion(record.getVersion())
-        .withDescription(record.getDescription()).withConfigAsProperties(props).withMetadata(record.getMetadata());
+        .withDescription(record.getDescription()).withConfig(ConfigUtils.propertiesToConfig(props)).withMetadata(record.getMetadata());
 
     if (!record.getTemplateUri().isEmpty()) {
       try {

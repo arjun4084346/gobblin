@@ -151,11 +151,6 @@ public class StaticFlowTemplate implements FlowTemplate {
     return this.rawConfig;
   }
 
-  @Override
-  public List<JobTemplate> getJobTemplates() {
-    return this.jobTemplates;
-  }
-
   private Config getResolvedFlowConfig(Config userConfig) {
     return userConfig.withFallback(this.rawConfig);
   }

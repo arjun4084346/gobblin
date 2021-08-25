@@ -285,7 +285,7 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
       //If it is a scheduled flow (and hence, does not have flowExecutionId in the FlowSpec) and the flow compilation is successful,
       // retrieve the flowExecutionId from the JobSpec.
       flowMetadata.putIfAbsent(TimingEvent.FlowEventConstants.FLOW_EXECUTION_ID_FIELD,
-          jobExecutionPlanDag.getNodes().get(0).getValue().getJobSpec().getConfigAsProperties().getProperty(ConfigurationKeys.FLOW_EXECUTION_ID_KEY));
+          jobExecutionPlanDag.getNodes().get(0).getValue().getJobSpec().getConfig().getString(ConfigurationKeys.FLOW_EXECUTION_ID_KEY));
 
       if (flowCompilationTimer.isPresent()) {
         flowCompilationTimer.get().stop(flowMetadata);

@@ -177,7 +177,7 @@ public class SimpleKafkaSpecProducer implements SpecProducer<Spec>, Closeable  {
       AvroJobSpec.Builder avroJobSpecBuilder = AvroJobSpec.newBuilder();
 
       avroJobSpecBuilder.setUri(jobSpec.getUri().toString()).setVersion(jobSpec.getVersion())
-          .setDescription(jobSpec.getDescription()).setProperties(Maps.fromProperties(jobSpec.getConfigAsProperties()))
+          .setDescription(jobSpec.getDescription()).setProperties(Maps.fromProperties(ConfigUtils.configToProperties(jobSpec.getConfig())))
           .setMetadata(ImmutableMap.of(SpecExecutor.VERB_KEY, verb.name()));
 
       if (jobSpec.getTemplateURI().isPresent()) {

@@ -186,7 +186,7 @@ public class SimpleKafkaSpecConsumer implements SpecConsumer<Spec>, Closeable {
           Properties props = new Properties();
           props.putAll(record.getProperties());
           jobSpecBuilder.withJobCatalogURI(record.getUri()).withVersion(record.getVersion())
-              .withDescription(record.getDescription()).withConfigAsProperties(props);
+              .withDescription(record.getDescription()).withConfig(ConfigUtils.propertiesToConfig(props));
 
           if (!record.getTemplateUri().isEmpty()) {
             jobSpecBuilder.withTemplate(new URI(record.getTemplateUri()));

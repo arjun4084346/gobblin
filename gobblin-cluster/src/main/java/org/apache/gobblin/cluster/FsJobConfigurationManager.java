@@ -101,19 +101,19 @@ public class FsJobConfigurationManager extends JobConfigurationManager {
         if (this.jobCatalogOptional.isPresent()) {
           this.jobCatalogOptional.get().put(jobSpec);
         }
-        postNewJobConfigArrival(jobSpec.getUri().toString(), jobSpec.getConfigAsProperties());
+        postNewJobConfigArrival(jobSpec.getUri().toString(), ConfigUtils.configToProperties(jobSpec.getConfig()));
       } else if (verb.equals(SpecExecutor.Verb.UPDATE)) {
         //Handle update.
         if (this.jobCatalogOptional.isPresent()) {
           this.jobCatalogOptional.get().put(jobSpec);
         }
-        postUpdateJobConfigArrival(jobSpec.getUri().toString(), jobSpec.getConfigAsProperties());
+        postUpdateJobConfigArrival(jobSpec.getUri().toString(), ConfigUtils.configToProperties(jobSpec.getConfig()));
       } else if (verb.equals(SpecExecutor.Verb.DELETE)) {
         // Handle delete
         if (this.jobCatalogOptional.isPresent()) {
           this.jobCatalogOptional.get().remove(jobSpec.getUri());
         }
-        postDeleteJobConfigArrival(jobSpec.getUri().toString(), jobSpec.getConfigAsProperties());
+        postDeleteJobConfigArrival(jobSpec.getUri().toString(), ConfigUtils.configToProperties(jobSpec.getConfig()));
       } else if (verb.equals(SpecExecutor.Verb.CANCEL)) {
           // Handle cancel
           postCancelJobConfigArrival(jobSpec.getUri().toString());

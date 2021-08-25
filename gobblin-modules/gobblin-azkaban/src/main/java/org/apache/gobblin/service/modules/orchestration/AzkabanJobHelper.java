@@ -16,6 +16,8 @@
  */
 package org.apache.gobblin.service.modules.orchestration;
 
+import com.google.common.collect.Lists;
+import com.typesafe.config.ConfigValue;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,14 +26,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -39,8 +39,6 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.collect.Lists;
 
 
 @Slf4j
@@ -332,7 +330,7 @@ public class AzkabanJobHelper {
     }
 
     StringBuilder propertyFileContent = new StringBuilder();
-    for (Map.Entry entry : azkabanProjectConfig.getJobSpec().getConfigAsProperties().entrySet()) {
+    for (Map.Entry<String, ConfigValue> entry : azkabanProjectConfig.getJobSpec().getConfig().entrySet()) {
       propertyFileContent.append(String.format("%s=%s", entry.getKey(), entry.getValue())).append("\n");
     }
 

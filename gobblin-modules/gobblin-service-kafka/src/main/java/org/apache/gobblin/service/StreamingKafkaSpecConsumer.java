@@ -17,31 +17,25 @@
 
 package org.apache.gobblin.service;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.gobblin.instrumented.Instrumented;
 import org.apache.gobblin.instrumented.StandardMetricsBridge;
 import org.apache.gobblin.metrics.ContextAwareMeter;
@@ -56,8 +50,9 @@ import org.apache.gobblin.runtime.job_monitor.KafkaJobMonitor;
 import org.apache.gobblin.runtime.std.DefaultJobCatalogListenerImpl;
 import org.apache.gobblin.util.CompletedFuture;
 import org.apache.gobblin.util.ConfigUtils;
+import org.slf4j.Logger;
 
-import static org.apache.gobblin.service.SimpleKafkaSpecExecutor.SPEC_KAFKA_TOPICS_KEY;
+import static org.apache.gobblin.service.SimpleKafkaSpecExecutor.*;
 
 @Slf4j
 /**
@@ -179,8 +174,7 @@ public class StreamingKafkaSpecConsumer extends AbstractIdleService implements S
       try {
         JobSpec.Builder jobSpecBuilder = JobSpec.builder(deletedJobURI);
 
-        Properties props = new Properties();
-        jobSpecBuilder.withVersion(deletedJobVersion).withConfigAsProperties(props);
+        jobSpecBuilder.withVersion(deletedJobVersion).withConfig(ConfigFactory.empty());
 
         _jobSpecQueue.put(new ImmutablePair<SpecExecutor.Verb, Spec>(SpecExecutor.Verb.DELETE, jobSpecBuilder.build()));
         _metrics.specConsumerJobSpecEnq.mark();
@@ -194,7 +188,7 @@ public class StreamingKafkaSpecConsumer extends AbstractIdleService implements S
       super.onCancelJob(cancelledJobURI);
       try {
         JobSpec.Builder jobSpecBuilder = JobSpec.builder(cancelledJobURI);
-        jobSpecBuilder.withConfigAsProperties(new Properties());
+        jobSpecBuilder.withConfig(ConfigFactory.empty());
         _jobSpecQueue.put(new ImmutablePair<>(SpecExecutor.Verb.CANCEL, jobSpecBuilder.build()));
         _metrics.specConsumerJobSpecEnq.mark();
       } catch (InterruptedException e) {

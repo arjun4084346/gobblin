@@ -49,7 +49,9 @@ public class FlowSpecSerializer implements JsonSerializer<FlowSpec> {
     flowSpecJson.add(FLOW_SPEC_DESCRIPTION_KEY, context.serialize(src.getDescription()));
     flowSpecJson.add(FLOW_SPEC_CONFIG_KEY, context.serialize(src.getConfig().root().render(ConfigRenderOptions.concise())));
 
-    flowSpecJson.add(FLOW_SPEC_CONFIG_AS_PROPERTIES_KEY, context.serialize(src.getConfigAsProperties()));
+    if (src.getConfigAsProperties() != null) {
+      flowSpecJson.add(FLOW_SPEC_CONFIG_AS_PROPERTIES_KEY, context.serialize(src.getConfigAsProperties()));
+    }
 
     JsonArray templateURIs = new JsonArray();
     if (src.getTemplateURIs().isPresent()) {

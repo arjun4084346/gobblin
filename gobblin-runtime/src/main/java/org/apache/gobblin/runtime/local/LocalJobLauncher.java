@@ -27,6 +27,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.gobblin.metrics.event.CountEventBuilder;
 import org.apache.gobblin.metrics.event.JobEvent;
 import org.apache.gobblin.runtime.job.JobInterruptionPredicate;
+import org.apache.gobblin.util.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,7 +106,7 @@ public class LocalJobLauncher extends AbstractJobLauncher {
 
   public LocalJobLauncher(Configurable instanceConf, JobSpec jobSpec) throws Exception {
     this(JobConfigurationUtils.combineSysAndJobProperties(instanceConf.getConfigAsProperties(),
-                                                          jobSpec.getConfigAsProperties()));
+        ConfigUtils.configToProperties(jobSpec.getConfig())));
   }
 
   @Override

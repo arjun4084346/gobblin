@@ -63,7 +63,7 @@ import org.apache.gobblin.util.ConfigUtils;
 @EqualsAndHashCode(exclude={"compilationErrors"})
 @SuppressFBWarnings(value="SE_BAD_FIELD",
     justification = "FindBugs complains about Config not being serializable, but the implementation of Config is serializable")
-public class FlowSpec implements Configurable, Spec {
+public class FlowSpec implements Spec {
   private static final long serialVersionUID = -5511988862945107734L;
 
   /** An URI identifying the flow. */
@@ -81,6 +81,7 @@ public class FlowSpec implements Configurable, Spec {
   /** Flow config as a properties collection for backwards compatibility */
   // Note that this property is not strictly necessary as it can be generated from the typesafe
   // config. We use it as a cache until typesafe config is more widely adopted in Gobblin.
+  // Keeping this for backward compatibility
   final Properties configAsProperties;
 
   /** URI of {@link org.apache.gobblin.runtime.api.JobTemplate} to use. */
@@ -113,7 +114,7 @@ public class FlowSpec implements Configurable, Spec {
     try {
       URI flowURI = new URI(catalogURI.getScheme(), catalogURI.getAuthority(),
           "/" + group + "/" + name, null);
-      FlowSpec.Builder builder = new FlowSpec.Builder(flowURI).withConfigAsProperties(flowProps);
+      FlowSpec.Builder builder = new FlowSpec.Builder(flowURI).withConfig(ConfigUtils.propertiesToConfig(flowProps));
       String descr = flowProps.getProperty(ConfigurationKeys.FLOW_DESCRIPTION_KEY, null);
       if (null != descr) {
         builder = builder.withDescription(descr);
@@ -153,7 +154,6 @@ public class FlowSpec implements Configurable, Spec {
     public static final String DEFAULT_VERSION = "";
     @VisibleForTesting
     private Optional<Config> config = Optional.absent();
-    private Optional<Properties> configAsProperties = Optional.absent();
     private Optional<URI> uri;
     private String version = FlowSpec.Builder.DEFAULT_VERSION;
     private Optional<String> description = Optional.absent();
@@ -185,8 +185,7 @@ public class FlowSpec implements Configurable, Spec {
       Preconditions.checkNotNull(this.uri);
       Preconditions.checkArgument(null != version, "Version should not be null");
 
-      return new FlowSpec(getURI(), getVersion(), getDescription(), getConfig(),
-          getConfigAsProperties(), getTemplateURIs(), getChildSpecs());
+      return new FlowSpec(getURI(), getVersion(), getDescription(), getConfig(), new Properties(), getTemplateURIs(), getChildSpecs());
     }
 
     /** The scheme and authority of the flow catalog URI are used to generate FlowSpec URIs from
@@ -282,31 +281,12 @@ public class FlowSpec implements Configurable, Spec {
     }
 
     public Config getConfig() {
-      if (!this.config.isPresent()) {
-        this.config = this.configAsProperties.isPresent() ?
-            Optional.of(ConfigUtils.propertiesToTypedConfig(this.configAsProperties.get(),
-                Optional.<String>absent())) :
-            Optional.of(getDefaultConfig());
-      }
-      return this.config.get();
+      return this.config.or(getDefaultConfig());
     }
 
     public FlowSpec.Builder withConfig(Config flowConfig) {
       Preconditions.checkNotNull(flowConfig);
       this.config = Optional.of(flowConfig);
-      return this;
-    }
-
-    public Properties getConfigAsProperties() {
-      if (!this.configAsProperties.isPresent()) {
-        this.configAsProperties = Optional.of(ConfigUtils.configToProperties(this.config.get()));
-      }
-      return this.configAsProperties.get();
-    }
-
-    public FlowSpec.Builder withConfigAsProperties(Properties flowConfig) {
-      Preconditions.checkNotNull(flowConfig);
-      this.configAsProperties = Optional.of(flowConfig);
       return this;
     }
 
@@ -430,7 +410,7 @@ public class FlowSpec implements Configurable, Spec {
     public static FlowConfig toFlowConfig(Spec spec) {
       FlowSpec flowSpec = (FlowSpec) spec;
       FlowConfig flowConfig = new FlowConfig();
-      Properties flowProps = flowSpec.getConfigAsProperties();
+      Properties flowProps = ConfigUtils.configToProperties(flowSpec.getConfig());
       Schedule schedule = null;
 
       if (flowProps.containsKey(ConfigurationKeys.JOB_SCHEDULE_KEY)) {

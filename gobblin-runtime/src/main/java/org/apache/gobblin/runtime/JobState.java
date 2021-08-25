@@ -17,22 +17,6 @@
 
 package org.apache.gobblin.runtime;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import org.apache.gobblin.metastore.DatasetStateStore;
-import org.apache.gobblin.runtime.job.JobProgress;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.io.Text;
-
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Meter;
@@ -45,11 +29,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.gson.stream.JsonWriter;
 import com.linkedin.data.template.StringMap;
-
+import com.typesafe.config.Config;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.gobblin.configuration.ConfigurationKeys;
 import org.apache.gobblin.configuration.SourceState;
 import org.apache.gobblin.configuration.State;
 import org.apache.gobblin.configuration.WorkUnitState;
+import org.apache.gobblin.metastore.DatasetStateStore;
 import org.apache.gobblin.metrics.GobblinMetrics;
 import org.apache.gobblin.rest.JobExecutionInfo;
 import org.apache.gobblin.rest.JobStateEnum;
@@ -59,11 +54,13 @@ import org.apache.gobblin.rest.MetricArray;
 import org.apache.gobblin.rest.MetricTypeEnum;
 import org.apache.gobblin.rest.TaskExecutionInfoArray;
 import org.apache.gobblin.runtime.api.MonitoredObject;
+import org.apache.gobblin.runtime.job.JobProgress;
 import org.apache.gobblin.runtime.util.JobMetrics;
 import org.apache.gobblin.runtime.util.MetricGroup;
 import org.apache.gobblin.source.extractor.JobCommitPolicy;
 import org.apache.gobblin.source.workunit.WorkUnit;
 import org.apache.gobblin.util.ImmutableProperties;
+import org.apache.hadoop.io.Text;
 
 
 /**
@@ -170,6 +167,12 @@ public class JobState extends SourceState implements JobProgress {
 
   public static String getJobNameFromProps(Properties props) {
     return props.getProperty(ConfigurationKeys.JOB_NAME_KEY);
+  }
+
+  public static String getJobNameFromConfig(Config config) {
+    return config.hasPath(ConfigurationKeys.JOB_NAME_KEY)
+        ? config.getString(ConfigurationKeys.JOB_NAME_KEY)
+        : null;
   }
 
   public static String getJobGroupFromState(State state) {

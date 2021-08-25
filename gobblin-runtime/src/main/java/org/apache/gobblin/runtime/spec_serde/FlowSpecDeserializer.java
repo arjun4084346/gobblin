@@ -17,17 +17,6 @@
 
 package org.apache.gobblin.runtime.spec_serde;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.lang.reflect.Type;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -35,7 +24,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
+import java.lang.reflect.Type;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.apache.gobblin.runtime.api.FlowSpec;
 import org.apache.gobblin.runtime.api.Spec;
 
@@ -49,20 +44,6 @@ public class FlowSpecDeserializer implements JsonDeserializer<FlowSpec> {
     String version = jsonObject.get(FlowSpecSerializer.FLOW_SPEC_VERSION_KEY).getAsString();
     String description = jsonObject.get(FlowSpecSerializer.FLOW_SPEC_DESCRIPTION_KEY).getAsString();
     Config config = ConfigFactory.parseString(jsonObject.get(FlowSpecSerializer.FLOW_SPEC_CONFIG_KEY).getAsString());
-
-    Properties properties;
-
-    try {
-      properties = context.deserialize(jsonObject.get(FlowSpecSerializer.FLOW_SPEC_CONFIG_AS_PROPERTIES_KEY), Properties.class);
-    } catch (JsonParseException e) {
-      // for backward compatibility
-      properties = new Properties();
-      try {
-        properties.load(new StringReader(jsonObject.get(FlowSpecSerializer.FLOW_SPEC_CONFIG_AS_PROPERTIES_KEY).getAsString()));
-      } catch (IOException ioe) {
-        throw new JsonParseException(e);
-      }
-    }
 
     Set<URI> templateURIs = new HashSet<>();
     try {
@@ -78,8 +59,7 @@ public class FlowSpecDeserializer implements JsonDeserializer<FlowSpec> {
       childSpecs.add(context.deserialize(spec, FlowSpec.class));
     }
 
-    FlowSpec.Builder builder = FlowSpec.builder(uri).withVersion(version).withDescription(description).withConfig(config)
-        .withConfigAsProperties(properties);
+    FlowSpec.Builder builder = FlowSpec.builder(uri).withVersion(version).withDescription(description).withConfig(config);
     if (!templateURIs.isEmpty()) {
       builder = builder.withTemplates(templateURIs);
     }

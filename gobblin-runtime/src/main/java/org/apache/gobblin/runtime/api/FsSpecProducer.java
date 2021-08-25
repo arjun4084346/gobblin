@@ -132,7 +132,7 @@ public class FsSpecProducer implements SpecProducer<Spec> {
   private AvroJobSpec convertToAvroJobSpec(JobSpec jobSpec, SpecExecutor.Verb verb) {
     return AvroJobSpec.newBuilder().
         setUri(jobSpec.getUri().toString()).
-        setProperties(Maps.fromProperties(jobSpec.getConfigAsProperties())).
+        setProperties(Maps.fromProperties(ConfigUtils.configToProperties(jobSpec.getConfig()))).
         setTemplateUri("FS:///").
         setDescription(jobSpec.getDescription()).
         setVersion(jobSpec.getVersion()).

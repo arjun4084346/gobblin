@@ -126,13 +126,13 @@ public class ScheduledJobConfigurationManager extends JobConfigurationManager {
 
         // Handle addition
         JobSpec jobSpec = (JobSpec) entry.getValue();
-        postNewJobConfigArrival(jobSpec.getUri().toString(), jobSpec.getConfigAsProperties());
+        postNewJobConfigArrival(jobSpec.getUri().toString(), ConfigUtils.configToProperties(jobSpec.getConfig()));
         jobSpecs.put(entry.getValue().getUri(), (JobSpec) entry.getValue());
       } else if (verb.equals(SpecExecutor.Verb.UPDATE)) {
 
         // Handle update
         JobSpec jobSpec = (JobSpec) entry.getValue();
-        postUpdateJobConfigArrival(jobSpec.getUri().toString(), jobSpec.getConfigAsProperties());
+        postUpdateJobConfigArrival(jobSpec.getUri().toString(), ConfigUtils.configToProperties(jobSpec.getConfig()));
         jobSpecs.put(entry.getValue().getUri(), (JobSpec) entry.getValue());
       } else if (verb.equals(SpecExecutor.Verb.DELETE)) {
 

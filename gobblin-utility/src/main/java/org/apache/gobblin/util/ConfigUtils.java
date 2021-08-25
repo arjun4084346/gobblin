@@ -272,7 +272,6 @@ public class ConfigUtils {
     return propKey;
   }
 
-
   /**
    * Convert all the keys that start with a <code>prefix</code> in {@link Properties} to a
    * {@link Config} instance. The method also tries to guess the types of properties.

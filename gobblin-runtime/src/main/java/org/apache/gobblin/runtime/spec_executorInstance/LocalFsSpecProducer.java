@@ -17,10 +17,12 @@
 
 package org.apache.gobblin.runtime.spec_executorInstance;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigRenderOptions;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Future;
@@ -70,12 +72,12 @@ public class LocalFsSpecProducer implements SpecProducer<Spec> {
   private Future<?> writeSpec(Spec spec, SpecExecutor.Verb verb) {
     if (spec instanceof JobSpec) {
       // format the JobSpec to have file of <flowGroup>_<flowName>.job
-      String flowExecutionId = ((JobSpec) spec).getConfigAsProperties().getProperty(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
+      String flowExecutionId = ((JobSpec) spec).getConfig().getString(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
       String jobFileName = getJobFileName(spec.getUri(), flowExecutionId);
       try (
         FileOutputStream fStream = new FileOutputStream(this.specProducerPath + File.separatorChar + jobFileName);
       ) {
-        ((JobSpec) spec).getConfigAsProperties().store(fStream, null);
+        fStream.write(((JobSpec) spec).getConfig().root().render(ConfigRenderOptions.concise()).getBytes(StandardCharsets.UTF_8));
         log.info("Writing job {} to {}", jobFileName, this.specProducerPath);
         return new CompletedFuture<>(Boolean.TRUE, null);
       } catch (IOException e) {

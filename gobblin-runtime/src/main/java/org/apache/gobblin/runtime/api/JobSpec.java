@@ -54,7 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 @Alpha
 @Data
 @AllArgsConstructor
-public class JobSpec implements Configurable, Spec {
+public class JobSpec implements Spec {
   private static final long serialVersionUID = 6074793380396465963L;
 
   /** An URI identifying the job. */
@@ -65,10 +65,6 @@ public class JobSpec implements Configurable, Spec {
   String description;
   /** Job config as a typesafe config object*/
   Config config;
-  /** Job config as a properties collection for backwards compatibility */
-  // Note that this property is not strictly necessary as it can be generated from the typesafe
-  // config. We use it as a cache until typesafe config is more widely adopted in Gobblin.
-  Properties configAsProperties;
   /** URI of {@link org.apache.gobblin.runtime.api.JobTemplate} to use. */
   Optional<URI> templateURI;
   /** Specific instance of template. */
@@ -102,7 +98,7 @@ public class JobSpec implements Configurable, Spec {
     try {
       URI jobURI = new URI(catalogURI.getScheme(), catalogURI.getAuthority(),
           "/" + group + "/" + name, null);
-      Builder builder = new Builder(jobURI).withConfigAsProperties(jobProps);
+      Builder builder = new Builder(jobURI).withConfig(ConfigUtils.propertiesToConfig(jobProps));
       String descr = JobState.getJobDescriptionFromProps(jobProps);
       if (null != descr) {
         builder.withDescription(descr);
@@ -141,7 +137,6 @@ public class JobSpec implements Configurable, Spec {
     public static final String DEFAULT_JOB_CATALOG_SCHEME = "gobblin-job";
     @VisibleForTesting
     private Optional<Config> config = Optional.absent();
-    private Optional<Properties> configAsProperties = Optional.absent();
     private Optional<URI> uri;
     private String version = "1";
     private Optional<String> description = Optional.absent();
@@ -174,7 +169,7 @@ public class JobSpec implements Configurable, Spec {
       Preconditions.checkNotNull(this.uri);
       Preconditions.checkNotNull(this.version);
       return new JobSpec(getURI(), getVersion(), getDescription(), getConfig(),
-                         getConfigAsProperties(), getTemplateURI(), getTemplate(), getMetadata());
+                         getTemplateURI(), getTemplate(), getMetadata());
     }
 
     /** The scheme and authority of the job catalog URI are used to generate JobSpec URIs from
@@ -270,31 +265,12 @@ public class JobSpec implements Configurable, Spec {
     }
 
     public Config getConfig() {
-      if (!this.config.isPresent()) {
-        this.config = this.configAsProperties.isPresent() ?
-            Optional.of(ConfigUtils.propertiesToTypedConfig(this.configAsProperties.get(),
-                                                            Optional.<String>absent())) :
-            Optional.of(getDefaultConfig());
-      }
-      return this.config.get();
+      return this.config.or(getDefaultConfig());
     }
 
     public Builder withConfig(Config jobConfig) {
       Preconditions.checkNotNull(jobConfig);
       this.config = Optional.of(jobConfig);
-      return this;
-    }
-
-    public Properties getConfigAsProperties() {
-      if (!this.configAsProperties.isPresent()) {
-        this.configAsProperties = Optional.of(ConfigUtils.configToProperties(this.config.get()));
-      }
-      return this.configAsProperties.get();
-    }
-
-    public Builder withConfigAsProperties(Properties jobConfig) {
-      Preconditions.checkNotNull(jobConfig);
-      this.configAsProperties = Optional.of(jobConfig);
       return this;
     }
 
@@ -374,7 +350,7 @@ public class JobSpec implements Configurable, Spec {
     stream.writeObject(version);
     stream.writeObject(description);
     stream.writeObject(templateURI.isPresent() ? templateURI.get() : null);
-    stream.writeObject(configAsProperties);
+    stream.writeObject(config);
   }
 
   private void readObject(java.io.ObjectInputStream stream)
@@ -383,7 +359,6 @@ public class JobSpec implements Configurable, Spec {
     version = (String) stream.readObject();
     description = (String) stream.readObject();
     templateURI = Optional.fromNullable((URI) stream.readObject());
-    configAsProperties = (Properties) stream.readObject();
-    config = ConfigUtils.propertiesToConfig(configAsProperties);
+    config = (Config) stream.readObject();
   }
 }

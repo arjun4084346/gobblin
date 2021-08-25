@@ -29,6 +29,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.gobblin.util.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,13 +172,13 @@ public class JobLauncherExecutionDriver extends FutureTask<JobExecutionResult> i
       Optional<String> jobLauncherType, SharedResourcesBroker<GobblinScopeTypes> instanceBroker) {
     if (jobLauncherType.isPresent()) {
       return JobLauncherFactory.newJobLauncher(_sysConfig.getConfigAsProperties(),
-             _jobSpec.getConfigAsProperties(), jobLauncherType.get(), instanceBroker);
+          ConfigUtils.configToProperties(_jobSpec.getConfig()), jobLauncherType.get(), instanceBroker);
     }
     else {
       _log.info("Creating auto jobLauncher for " + _jobSpec);
       try {
         return JobLauncherFactory.newJobLauncher(_sysConfig.getConfigAsProperties(),
-             _jobSpec.getConfigAsProperties(), instanceBroker);
+            ConfigUtils.configToProperties(_jobSpec.getConfig()), instanceBroker);
       } catch (Exception e) {
         throw new RuntimeException("JobLauncher creation failed: " + e, e);
       }

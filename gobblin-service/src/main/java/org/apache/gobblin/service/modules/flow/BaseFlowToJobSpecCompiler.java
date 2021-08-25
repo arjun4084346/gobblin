@@ -17,33 +17,30 @@
 
 package org.apache.gobblin.service.modules.flow;
 
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
+import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigValue;
+import com.typesafe.config.ConfigValueFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.Timer;
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigValueFactory;
-
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.Setter;
-
+import org.apache.commons.lang3.StringUtils;
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.configuration.ConfigurationKeys;
 import org.apache.gobblin.configuration.State;
 import org.apache.gobblin.instrumented.Instrumented;
 import org.apache.gobblin.metrics.MetricContext;
+import org.apache.gobblin.metrics.ServiceMetricNames;
 import org.apache.gobblin.metrics.Tag;
 import org.apache.gobblin.runtime.api.FlowSpec;
 import org.apache.gobblin.runtime.api.JobSpec;
@@ -55,11 +52,11 @@ import org.apache.gobblin.runtime.job_catalog.FSJobCatalog;
 import org.apache.gobblin.runtime.job_spec.ResolvedJobSpec;
 import org.apache.gobblin.runtime.spec_catalog.AddSpecResponse;
 import org.apache.gobblin.service.ServiceConfigKeys;
-import org.apache.gobblin.metrics.ServiceMetricNames;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.util.ConfigUtils;
-import org.apache.gobblin.util.PropertiesUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 // Provide base implementation for constructing multi-hops route.
@@ -69,7 +66,6 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
   // Since {@link SpecCompiler} is an {@link SpecCatalogListener}, it is expected that any Spec change should be reflected
   // to these data structures.
   @Getter
-  @Setter
   protected final Map<URI, TopologySpec> topologySpecMap;
 
   protected final Config config;
@@ -153,7 +149,7 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
   public synchronized AddSpecResponse onAddSpec(Spec addedSpec) {
     TopologySpec spec = (TopologySpec) addedSpec;
     log.info ("Loading topology {}", spec.toLongString());
-    for (Map.Entry entry: spec.getConfigAsProperties().entrySet()) {
+    for (Map.Entry<String, ConfigValue> entry: spec.getConfig().entrySet()) {
       log.info ("topo: {} --> {}", entry.getKey(), entry.getValue());
     }
 
@@ -203,11 +199,6 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public Map<URI, TopologySpec> getTopologySpecMap() {
-    return this.topologySpecMap;
-  }
-
   public abstract Dag<JobExecutionPlan> compileFlow(Spec spec);
 
   /**
@@ -228,13 +219,13 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
       jobSpecBuilder = jobSpecBuilder.withTemplate(flowSpec.getTemplateURIs().get().iterator().next());
       try {
         jobSpec = new ResolvedJobSpec(jobSpecBuilder.build(), templateCatalog.get());
-        log.info("Resolved JobSpec properties are: " + PropertiesUtils.prettyPrintProperties(jobSpec.getConfigAsProperties()));
+        log.info("Resolved JobSpec properties are: " + jobSpec.getConfig().root().render(ConfigRenderOptions.concise()));
       } catch (SpecNotFoundException | JobTemplate.TemplateException e) {
         throw new RuntimeException("Could not resolve template in JobSpec from TemplateCatalog", e);
       }
     } else {
       jobSpec = jobSpecBuilder.build();
-      log.info("Unresolved JobSpec properties are: " + jobSpec.getConfigAsProperties());
+      log.info("Unresolved JobSpec properties are: " + jobSpec.getConfig().root().render(ConfigRenderOptions.concise()));
     }
 
     // Remove schedule
@@ -255,8 +246,6 @@ public abstract class BaseFlowToJobSpecCompiler implements SpecCompiler {
     jobSpec.setConfig(jobSpec.getConfig().withValue(ConfigurationKeys.FLOW_EXECUTION_ID_KEY,
         ConfigValueFactory.fromAnyRef(flowExecutionId)));
 
-    // Reset properties in Spec from Config
-    jobSpec.setConfigAsProperties(ConfigUtils.configToProperties(jobSpec.getConfig()));
     return jobSpec;
   }
 

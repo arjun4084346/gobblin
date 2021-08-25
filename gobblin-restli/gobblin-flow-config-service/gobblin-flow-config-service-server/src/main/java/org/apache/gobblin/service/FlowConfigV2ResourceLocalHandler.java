@@ -59,10 +59,10 @@ public class FlowConfigV2ResourceLocalHandler extends FlowConfigResourceLocalHan
     log.info(createLog);
     FlowSpec flowSpec = createFlowSpecForConfig(flowConfig);
     FlowStatusId flowStatusId = new FlowStatusId()
-        .setFlowName(flowSpec.getConfigAsProperties().getProperty(ConfigurationKeys.FLOW_NAME_KEY))
-        .setFlowGroup(flowSpec.getConfigAsProperties().getProperty(ConfigurationKeys.FLOW_GROUP_KEY));
-    if (flowSpec.getConfigAsProperties().containsKey(ConfigurationKeys.FLOW_EXECUTION_ID_KEY)) {
-      flowStatusId.setFlowExecutionId(Long.valueOf(flowSpec.getConfigAsProperties().getProperty(ConfigurationKeys.FLOW_EXECUTION_ID_KEY)));
+        .setFlowName(flowSpec.getConfig().getString(ConfigurationKeys.FLOW_NAME_KEY))
+        .setFlowGroup(flowSpec.getConfig().getString(ConfigurationKeys.FLOW_GROUP_KEY));
+    if (flowSpec.getConfig().hasPath(ConfigurationKeys.FLOW_EXECUTION_ID_KEY)) {
+      flowStatusId.setFlowExecutionId(Long.valueOf(flowSpec.getConfig().getString(ConfigurationKeys.FLOW_EXECUTION_ID_KEY)));
     } else {
       flowStatusId.setFlowExecutionId(-1L);
     }

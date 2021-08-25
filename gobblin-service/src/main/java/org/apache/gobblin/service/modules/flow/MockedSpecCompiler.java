@@ -51,7 +51,7 @@ public class MockedSpecCompiler extends IdentityFlowToJobSpecCompiler {
 
   @Override
   public Dag<JobExecutionPlan> compileFlow(Spec spec) {
-    String flowName = (String) ((FlowSpec) spec).getConfigAsProperties().get(ConfigurationKeys.FLOW_NAME_KEY);
+    String flowName = ((FlowSpec) spec).getConfig().getString(ConfigurationKeys.FLOW_NAME_KEY);
     if (flowName.equalsIgnoreCase(UNCOMPILABLE_FLOW)) {
       return null;
     }
@@ -65,9 +65,9 @@ public class MockedSpecCompiler extends IdentityFlowToJobSpecCompiler {
       String specUri = "/foo/bar/spec/" + i;
       Properties properties = new Properties();
       properties.put(ConfigurationKeys.FLOW_NAME_KEY, flowName);
-      properties.put(ConfigurationKeys.FLOW_GROUP_KEY, ((FlowSpec)spec).getConfigAsProperties().get(ConfigurationKeys.FLOW_GROUP_KEY));
-      properties.put(ConfigurationKeys.JOB_NAME_KEY, ((FlowSpec)spec).getConfigAsProperties().get(ConfigurationKeys.FLOW_NAME_KEY) + "_" + i);
-      properties.put(ConfigurationKeys.JOB_GROUP_KEY, ((FlowSpec)spec).getConfigAsProperties().get(ConfigurationKeys.FLOW_GROUP_KEY) + "_" + i);
+      properties.put(ConfigurationKeys.FLOW_GROUP_KEY, ((FlowSpec)spec).getConfig().getString(ConfigurationKeys.FLOW_GROUP_KEY));
+      properties.put(ConfigurationKeys.JOB_NAME_KEY, ((FlowSpec)spec).getConfig().getString(ConfigurationKeys.FLOW_NAME_KEY) + "_" + i);
+      properties.put(ConfigurationKeys.JOB_GROUP_KEY, ((FlowSpec)spec).getConfig().getString(ConfigurationKeys.FLOW_GROUP_KEY) + "_" + i);
       properties.put(ConfigurationKeys.FLOW_EXECUTION_ID_KEY, flowExecutionId);
       JobSpec jobSpec = JobSpec.builder(specUri)
           .withConfig(ConfigUtils.propertiesToConfig(properties))

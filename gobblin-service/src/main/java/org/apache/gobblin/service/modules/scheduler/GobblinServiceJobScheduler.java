@@ -21,7 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -211,8 +211,8 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
       Spec spec = this.flowCatalog.get().getSpecWrapper(specUris.next());
       try {
         // Disable FLOW_RUN_IMMEDIATELY on service startup or leadership change if the property is set to true
-        if (spec instanceof FlowSpec && PropertiesUtils.getPropAsBoolean((
-            (FlowSpec) spec).getConfigAsProperties(), ConfigurationKeys.FLOW_RUN_IMMEDIATELY, "false")) {
+        if (spec instanceof FlowSpec && ConfigUtils.getBoolean(
+            ((FlowSpec) spec).getConfig(), ConfigurationKeys.FLOW_RUN_IMMEDIATELY, false)) {
           Spec modifiedSpec = disableFlowRunImmediatelyOnStart((FlowSpec) spec);
           onAddSpec(modifiedSpec);
         } else {
@@ -241,12 +241,10 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
 
   @VisibleForTesting
   protected static Spec disableFlowRunImmediatelyOnStart(FlowSpec spec) {
-    Properties properties = spec.getConfigAsProperties();
-    properties.setProperty(ConfigurationKeys.FLOW_RUN_IMMEDIATELY, "false");
-    Config config = ConfigFactory.parseProperties(properties);
-    FlowSpec flowSpec = new FlowSpec(spec.getUri(), spec.getVersion(), spec.getDescription(), config, properties,
+    Config config = spec.getConfig();
+    config.withValue(ConfigurationKeys.FLOW_RUN_IMMEDIATELY, ConfigValueFactory.fromAnyRef("false"));
+    return new FlowSpec(spec.getUri(), spec.getVersion(), spec.getDescription(), config, new Properties(),
         spec.getTemplateURIs(), spec.getChildSpecs());
-    return flowSpec;
   }
 
   @Override
@@ -415,7 +413,7 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
 
   private Properties createJobConfig(FlowSpec flowSpec) {
     Properties jobConfig = new Properties();
-    Properties flowSpecProperties = flowSpec.getConfigAsProperties();
+    Config flowSpecConfig = flowSpec.getConfig();
 
     jobConfig.putAll(this.properties);
     jobConfig.setProperty(ConfigurationKeys.JOB_NAME_KEY, flowSpec.getUri().toString());
@@ -425,10 +423,10 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
         ConfigUtils.getString((flowSpec).getConfig(), ConfigurationKeys.FLOW_RUN_IMMEDIATELY, "false"));
 
     // todo : we should check if the job schedule is a valid cron schedule
-    if (flowSpecProperties.containsKey(ConfigurationKeys.JOB_SCHEDULE_KEY) && StringUtils.isNotBlank(
-        flowSpecProperties.getProperty(ConfigurationKeys.JOB_SCHEDULE_KEY))) {
+    if (flowSpecConfig.hasPath(ConfigurationKeys.JOB_SCHEDULE_KEY) && StringUtils.isNotBlank(
+        flowSpecConfig.getString(ConfigurationKeys.JOB_SCHEDULE_KEY))) {
       jobConfig.setProperty(ConfigurationKeys.JOB_SCHEDULE_KEY,
-          flowSpecProperties.getProperty(ConfigurationKeys.JOB_SCHEDULE_KEY));
+          flowSpecConfig.getString(ConfigurationKeys.JOB_SCHEDULE_KEY));
     }
 
     return jobConfig;

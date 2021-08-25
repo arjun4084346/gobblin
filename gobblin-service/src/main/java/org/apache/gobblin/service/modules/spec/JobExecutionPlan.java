@@ -152,9 +152,6 @@ public class JobExecutionPlan {
       Config dynamicConfig = dynamicConfigGenerator.generateDynamicConfig(jobSpec.getConfig().withFallback(sysConfig));
       jobSpec.setConfig(dynamicConfig.withFallback(jobSpec.getConfig()));
 
-      // Reset properties in Spec from Config
-      jobSpec.setConfigAsProperties(ConfigUtils.configToProperties(jobSpec.getConfig()));
-
       return jobSpec;
     }
 

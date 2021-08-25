@@ -79,7 +79,7 @@ public class SchedulerUtils {
     List<Properties> jobConfigs = Lists.newArrayListWithCapacity(configs.size());
     for (Config config : configs) {
       try {
-        jobConfigs.add(resolveTemplate(ConfigUtils.configToProperties(config), resolver));
+        jobConfigs.add(ConfigUtils.configToProperties(resolveTemplate(config, resolver)));
       } catch (IOException ioe) {
         LOGGER.error("Could not parse job config at " + ConfigUtils.getString(config,
             ConfigurationKeys.JOB_CONFIG_FILE_PATH_KEY, "Unknown path"), ioe);
@@ -110,7 +110,7 @@ public class SchedulerUtils {
     List<Properties> jobConfigs = Lists.newArrayListWithCapacity(configs.size());
     for (Config config : configs) {
       try {
-        jobConfigs.add(resolveTemplate(ConfigUtils.configToProperties(config), resolver));
+        jobConfigs.add(ConfigUtils.configToProperties(resolveTemplate(config, resolver)));
       } catch (IOException ioe) {
         LOGGER.error("Could not parse job config at " + ConfigUtils.getString(config,
             ConfigurationKeys.JOB_CONFIG_FILE_PATH_KEY, "Unknown path"), ioe);
@@ -136,7 +136,7 @@ public class SchedulerUtils {
 
     Config sysConfig = ConfigUtils.propertiesToConfig(sysProps);
     Config config = loader.loadPullFile(jobConfigPath, sysConfig, true);
-    return resolveTemplate(ConfigUtils.configToProperties(config), resolver);
+    return ConfigUtils.configToProperties(resolveTemplate(config, resolver));
   }
 
   /**
@@ -170,19 +170,19 @@ public class SchedulerUtils {
     }));
   }
 
-  private static Properties resolveTemplate(Properties jobProps, JobSpecResolver resolver) throws IOException {
+  private static Config resolveTemplate(Config config, JobSpecResolver resolver) throws IOException {
     // If there is no job template, do not spend resources creating a new JobSpec
-    if (!jobProps.containsKey(ConfigurationKeys.JOB_TEMPLATE_PATH)) {
-      return jobProps;
+    if (!config.hasPath(ConfigurationKeys.JOB_TEMPLATE_PATH)) {
+      return config;
     }
 
     try {
-      JobSpec.Builder jobSpecBuilder = JobSpec.builder().withConfig(ConfigUtils.propertiesToConfig(jobProps));
+      JobSpec.Builder jobSpecBuilder = JobSpec.builder().withConfig(config);
         JobTemplate jobTemplate = ResourceBasedJobTemplate
-            .forResourcePath(jobProps.getProperty(ConfigurationKeys.JOB_TEMPLATE_PATH),
+            .forResourcePath(config.getString(ConfigurationKeys.JOB_TEMPLATE_PATH),
                 new PackagedTemplatesJobCatalogDecorator());
         jobSpecBuilder.withTemplate(jobTemplate);
-      return resolver.resolveJobSpec(jobSpecBuilder.build()).getConfigAsProperties();
+      return resolver.resolveJobSpec(jobSpecBuilder.build()).getConfig();
     } catch (JobTemplate.TemplateException | SpecNotFoundException | URISyntaxException exc) {
       throw new IOException(exc);
     }

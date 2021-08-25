@@ -51,7 +51,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 @NotThreadSafe
-public class TopologySpec implements Configurable, Spec {
+public class TopologySpec implements Spec {
   public static final String DEFAULT_SPEC_EXECUTOR_INSTANCE = InMemorySpecExecutor.class.getCanonicalName();
   public static final String SPEC_EXECUTOR_INSTANCE_KEY = "specExecutorInstance.class";
 
@@ -69,11 +69,6 @@ public class TopologySpec implements Configurable, Spec {
   /** Topology config as a typesafe config object*/
   @SuppressWarnings(justification="No bug", value="SE_BAD_FIELD")
   final Config config;
-
-  /** Topology config as a properties collection for backwards compatibility */
-  // Note that this property is not strictly necessary as it can be generated from the typesafe
-  // config. We use it as a cache until typesafe config is more widely adopted in Gobblin.
-  final Properties configAsProperties;
 
   /** Underlying executor instance such as Gobblin cluster or Azkaban */
   @SuppressWarnings(justification="Initialization handled by getter", value="SE_TRANSIENT_FIELD_NOT_RESTORED")
@@ -122,7 +117,7 @@ public class TopologySpec implements Configurable, Spec {
     try {
       URI topologyURI = new URI(catalogURI.getScheme(), catalogURI.getAuthority(),
           "/" + group + "/" + name, null);
-      TopologySpec.Builder builder = new TopologySpec.Builder(topologyURI).withConfigAsProperties(topologyProps);
+      TopologySpec.Builder builder = new TopologySpec.Builder(topologyURI).withConfig(ConfigUtils.propertiesToConfig(topologyProps));
       String descr = topologyProps.getProperty(ConfigurationKeys.TOPOLOGY_DESCRIPTION_KEY, null);
       if (null != descr) {
         builder = builder.withDescription(descr);
@@ -161,7 +156,6 @@ public class TopologySpec implements Configurable, Spec {
     public static final String DEFAULT_TOPOLOGY_CATALOG_SCHEME = "gobblin-topology";
     @VisibleForTesting
     private Optional<Config> config = Optional.absent();
-    private Optional<Properties> configAsProperties = Optional.absent();
     private Optional<URI> uri;
     private String version = "1";
     private Optional<String> description = Optional.absent();
@@ -191,9 +185,7 @@ public class TopologySpec implements Configurable, Spec {
     public TopologySpec build() {
       Preconditions.checkNotNull(this.uri);
       Preconditions.checkNotNull(this.version);
-      return new TopologySpec(getURI(), getVersion(), getDescription(), getConfig(), getConfigAsProperties(),
-          getSpecExceutorInstance());
-
+      return new TopologySpec(getURI(), getVersion(), getDescription(), getConfig(), getSpecExceutorInstance());
     }
 
     /** The scheme and authority of the topology catalog URI are used to generate TopologySpec URIs from
@@ -288,31 +280,12 @@ public class TopologySpec implements Configurable, Spec {
     }
 
     public Config getConfig() {
-      if (!this.config.isPresent()) {
-        this.config = this.configAsProperties.isPresent() ?
-            Optional.of(ConfigUtils.propertiesToTypedConfig(this.configAsProperties.get(),
-                Optional.<String>absent())) :
-            Optional.of(getDefaultConfig());
-      }
-      return this.config.get();
+      return this.config.or(getDefaultConfig());
     }
 
     public TopologySpec.Builder withConfig(Config topologyConfig) {
       Preconditions.checkNotNull(topologyConfig);
       this.config = Optional.of(topologyConfig);
-      return this;
-    }
-
-    public Properties getConfigAsProperties() {
-      if (!this.configAsProperties.isPresent()) {
-        this.configAsProperties = Optional.of(ConfigUtils.configToProperties(this.config.get()));
-      }
-      return this.configAsProperties.get();
-    }
-
-    public TopologySpec.Builder withConfigAsProperties(Properties topologyConfig) {
-      Preconditions.checkNotNull(topologyConfig);
-      this.configAsProperties = Optional.of(topologyConfig);
       return this;
     }
 

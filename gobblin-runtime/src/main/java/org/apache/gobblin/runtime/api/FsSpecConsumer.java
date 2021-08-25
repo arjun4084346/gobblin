@@ -119,7 +119,6 @@ public class FsSpecConsumer implements SpecConsumer<Spec> {
         jobSpecBuilder.withJobCatalogURI(avroJobSpec.getUri())
             .withVersion(avroJobSpec.getVersion())
             .withDescription(avroJobSpec.getDescription())
-            .withConfigAsProperties(props)
             .withConfig(ConfigUtils.propertiesToConfig(props));
 
         try {
