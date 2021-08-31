@@ -24,6 +24,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.gobblin.configuration.ConfigurationKeys;
+import org.apache.gobblin.configuration.State;
+import org.apache.gobblin.destination.DestinationDatasetHandlerService;
+import org.apache.gobblin.source.workunit.BasicWorkUnitStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -94,6 +98,8 @@ public class Trash implements GobblinTrash {
    */
   protected Path createTrashLocation(FileSystem fs, Properties props, String user) throws IOException {
     Path trashLocation;
+    new DestinationDatasetHandlerService(new State(props), false)
+        .executeHandlers(new BasicWorkUnitStream.Builder(Collections.EMPTY_LIST).build());
     if (props.containsKey(TRASH_LOCATION_KEY)) {
       trashLocation = new Path(props.getProperty(TRASH_LOCATION_KEY).replaceAll("\\$USER", user));
     } else {

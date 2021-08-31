@@ -462,6 +462,7 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
 
     @Override
     public void interrupt() throws UnableToInterruptJobException {
+      // send cancel job
       log.info("Job was interrupted");
     }
   }

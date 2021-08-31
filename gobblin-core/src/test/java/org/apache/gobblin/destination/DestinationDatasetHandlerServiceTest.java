@@ -44,7 +44,7 @@ public class DestinationDatasetHandlerServiceTest {
   void testSingleHandler() throws Exception {
     SourceState state = new SourceState();
     state.setProp(ConfigurationKeys.DESTINATION_DATASET_HANDLER_CLASS, TestDestinationDatasetHandler.class.getName());
-    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true, this.eventSubmitter);
+    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true);
     List<WorkUnit> workUnits = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       WorkUnit wu = WorkUnit.createEmpty();
@@ -63,7 +63,7 @@ public class DestinationDatasetHandlerServiceTest {
     SourceState state = new SourceState();
     state.setProp(ConfigurationKeys.DESTINATION_DATASET_HANDLER_CLASS,
         TestDestinationDatasetHandler.class.getName() + "," + TestDestinationDatasetHandler.class.getName());
-    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true, this.eventSubmitter);
+    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true);
     List<WorkUnit> workUnits = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       WorkUnit wu = WorkUnit.createEmpty();
@@ -84,7 +84,7 @@ public class DestinationDatasetHandlerServiceTest {
     // add whitespace in class list
     state.setProp(ConfigurationKeys.DESTINATION_DATASET_HANDLER_CLASS,
         TestDestinationDatasetHandler.class.getName() + "    ,      " + TestDestinationDatasetHandler.class.getName());
-    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true, this.eventSubmitter);
+    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true);
     List<WorkUnit> workUnits = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       WorkUnit wu = WorkUnit.createEmpty();
@@ -103,7 +103,7 @@ public class DestinationDatasetHandlerServiceTest {
   // should not throw an exception
   void testEmpty() throws Exception {
     SourceState state = new SourceState();
-    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true, this.eventSubmitter);
+    DestinationDatasetHandlerService service = new DestinationDatasetHandlerService(state, true);
     List<WorkUnit> workUnits = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       WorkUnit wu = WorkUnit.createEmpty();

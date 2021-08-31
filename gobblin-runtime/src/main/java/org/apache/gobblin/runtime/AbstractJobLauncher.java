@@ -482,7 +482,7 @@ public abstract class AbstractJobLauncher implements JobLauncher {
 
         // Perform work needed before writing is done
         Boolean canCleanUp = this.canCleanStagingData(this.jobContext.getJobState());
-        closer.register(new DestinationDatasetHandlerService(jobState, canCleanUp, this.eventSubmitter))
+        closer.register(new DestinationDatasetHandlerService(jobState, canCleanUp))
             .executeHandlers(workUnitStream);
         //Initialize writer and converter(s)
         closer.register(WriterInitializerFactory.newInstace(jobState, workUnitStream)).initialize();
