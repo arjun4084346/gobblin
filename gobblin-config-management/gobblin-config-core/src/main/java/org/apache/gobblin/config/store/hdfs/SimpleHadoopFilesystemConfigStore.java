@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -506,28 +505,13 @@ public class SimpleHadoopFilesystemConfigStore implements ConfigStore, Deployabl
 
       this.fs.mkdirs(hdfsNewVersionPath, deploymentConfig.getStorePermissions());
 
-      Set<ConfigStream> confStreams = deploymentConfig.getDeployableConfigSource().getConfigStreams();
-
-      for (ConfigStream confStream : confStreams) {
-        String confAtPath = confStream.getConfigPath();
-
-        log.info("Copying resource at : " + confAtPath);
-
-        Path hdsfConfPath = new Path(hdfsNewVersionPath, confAtPath);
-
-        if (!this.fs.exists(hdsfConfPath.getParent())) {
-          this.fs.mkdirs(hdsfConfPath.getParent());
+      deploymentConfig.getDeployableConfigSource().getConfigStreams().parallelStream().forEach(configStream -> {
+        try {
+          deployConfig(hdfsNewVersionPath, configStream);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-
-        // If an empty directory needs to created it may not have a stream.
-        if (confStream.getInputStream().isPresent()) {
-          // Read the resource as a stream from the classpath and write it to HDFS
-          try (SeekableFSInputStream inputStream = new SeekableFSInputStream(confStream.getInputStream().get());
-              FSDataOutputStream os = this.fs.create(hdsfConfPath, false)) {
-            StreamUtils.copy(inputStream, os);
-          }
-        }
-      }
+      });
 
       // Set permission for newly copied files
       for (FileStatus fileStatus : FileListUtils.listPathsRecursively(this.fs, hdfsNewVersionPath,
@@ -545,6 +529,28 @@ public class SimpleHadoopFilesystemConfigStore implements ConfigStore, Deployabl
 
     log.info(String.format("New version %s of config store deployed at %s", deploymentConfig.getNewVersion(),
         hdfsconfigStoreRoot));
+  }
+
+  void deployConfig(Path hdfsNewVersionPath, ConfigStream confStream) throws IOException {
+    String confAtPath = confStream.getConfigPath();
+
+    log.info("Copying resource at : " + confAtPath);
+
+    Path hdsfConfPath = new Path(hdfsNewVersionPath, confAtPath);
+
+    if (!this.fs.exists(hdsfConfPath.getParent())) {
+      this.fs.mkdirs(hdsfConfPath.getParent());
+    }
+
+    // If an empty directory needs to created it may not have a stream.
+    if (confStream.getInputStream().isPresent()) {
+      InputStream configStream = confStream.getInputStream().get();
+      // Read the resource as a stream from the classpath and write it to HDFS
+      try (SeekableFSInputStream inputStream = new SeekableFSInputStream(configStream);
+          FSDataOutputStream os = this.fs.create(hdsfConfPath, false)) {
+        StreamUtils.copy(inputStream, os);
+      }
+    }
   }
 
   @VisibleForTesting
