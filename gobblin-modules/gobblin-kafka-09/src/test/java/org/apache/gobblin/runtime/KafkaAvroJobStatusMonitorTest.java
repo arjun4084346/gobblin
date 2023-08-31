@@ -71,6 +71,7 @@ import org.apache.gobblin.runtime.troubleshooter.InMemoryMultiContextIssueReposi
 import org.apache.gobblin.runtime.troubleshooter.JobIssueEventHandler;
 import org.apache.gobblin.runtime.troubleshooter.MultiContextIssueRepository;
 import org.apache.gobblin.service.ExecutionStatus;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.monitoring.GaaSObservabilityEventProducer;
 import org.apache.gobblin.service.monitoring.JobStatusRetriever;
 import org.apache.gobblin.service.monitoring.KafkaAvroJobStatusMonitor;
@@ -775,7 +776,7 @@ public class KafkaAvroJobStatusMonitorTest {
     public MockKafkaAvroJobStatusMonitor(String topic, Config config, int numThreads,
         AtomicBoolean shouldThrowFakeExceptionInParseJobStatusToggle, GaaSObservabilityEventProducer producer)
         throws IOException, ReflectiveOperationException {
-      super(topic, config, numThreads, mock(JobIssueEventHandler.class), producer);
+      super(topic, config, numThreads, mock(JobIssueEventHandler.class), producer, mock(DagProcessingEngine.class));
       shouldThrowFakeExceptionInParseJobStatus = shouldThrowFakeExceptionInParseJobStatusToggle;
     }
 

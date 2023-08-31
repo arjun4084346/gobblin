@@ -59,6 +59,7 @@ import org.apache.gobblin.runtime.spec_catalog.TopologyCatalog;
 import org.apache.gobblin.service.ServiceConfigKeys;
 import org.apache.gobblin.service.modules.flow.SpecCompiler;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
+import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.service.modules.utils.FlowCompilationValidationHelper;
 import org.apache.gobblin.service.modules.utils.SharedFlowMetricsSingleton;
@@ -83,6 +84,7 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
   protected final SpecCompiler specCompiler;
   protected final Optional<TopologyCatalog> topologyCatalog;
   protected final Optional<DagManager> dagManager;
+  protected final Optional<DagProcessingEngine> dagProcessingEngine;
 
   protected final MetricContext metricContext;
 
@@ -107,12 +109,14 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
   private final ClassAliasResolver<SpecCompiler> aliasResolver;
 
   public Orchestrator(Config config, Optional<TopologyCatalog> topologyCatalog, Optional<DagManager> dagManager,
-      Optional<Logger> log, FlowStatusGenerator flowStatusGenerator, boolean instrumentationEnabled,
-      Optional<FlowTriggerHandler> flowTriggerHandler, SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
+      Optional<DagProcessingEngine> dagProcessingEngine, Optional<Logger> log, FlowStatusGenerator flowStatusGenerator,
+      boolean instrumentationEnabled, Optional<FlowTriggerHandler> flowTriggerHandler,
+      SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
     _log = log.isPresent() ? log.get() : LoggerFactory.getLogger(getClass());
     this.aliasResolver = new ClassAliasResolver<>(SpecCompiler.class);
     this.topologyCatalog = topologyCatalog;
     this.dagManager = dagManager;
+    this.dagProcessingEngine = dagProcessingEngine;
     this.flowStatusGenerator = flowStatusGenerator;
     this.flowTriggerHandler = flowTriggerHandler;
     this.sharedFlowMetricsSingleton = sharedFlowMetricsSingleton;
@@ -160,10 +164,10 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
 
   @Inject
   public Orchestrator(Config config, FlowStatusGenerator flowStatusGenerator, Optional<TopologyCatalog> topologyCatalog,
-      Optional<DagManager> dagManager, Optional<Logger> log, Optional<FlowTriggerHandler> flowTriggerHandler,
-      SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
-    this(config, topologyCatalog, dagManager, log, flowStatusGenerator, true, flowTriggerHandler,
-        sharedFlowMetricsSingleton);
+      Optional<DagManager> dagManager, Optional<DagProcessingEngine> dagProcessingEngine, Optional<Logger> log,
+      Optional<FlowTriggerHandler> flowTriggerHandler, SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
+    this(config, topologyCatalog, dagManager, dagProcessingEngine, log, flowStatusGenerator, true,
+        flowTriggerHandler, sharedFlowMetricsSingleton);
   }
 
 
@@ -385,6 +389,9 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
       if (this.dagManager.isPresent()) {
         _log.info("Forwarding cancel request for flow URI {} to DagManager.", spec.getUri());
         this.dagManager.get().stopDag(spec.getUri());
+      }
+      if (this.dagProcessingEngine.isPresent()) {
+        this.dagProcessingEngine.get().addDagTask(new KillDagTask(spec.getUri()));
       }
       // We need to recompile the flow to find the spec producer,
       // If compilation result is different, its remove request can go to some different spec producer

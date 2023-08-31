@@ -279,7 +279,7 @@ public class DagManager extends AbstractIdleService {
   }
 
   // Initializes and returns an array of Queue of size numThreads
-  private static LinkedBlockingDeque<?>[] initializeDagQueue(int numThreads) {
+  static LinkedBlockingDeque<?>[] initializeDagQueue(int numThreads) {
     LinkedBlockingDeque<?>[] queue = new LinkedBlockingDeque[numThreads];
 
     for (int i=0; i< numThreads; i++) {
@@ -339,18 +339,7 @@ public class DagManager extends AbstractIdleService {
       throw new IOException("Could not add dag" + dagId + "to queue");
     }
     if (setStatus) {
-      submitEventsAndSetStatus(dag);
-    }
-  }
-
-  private void submitEventsAndSetStatus(Dag<JobExecutionPlan> dag) {
-    if (this.eventSubmitter.isPresent()) {
-      for (DagNode<JobExecutionPlan> dagNode : dag.getNodes()) {
-        JobExecutionPlan jobExecutionPlan = DagManagerUtils.getJobExecutionPlan(dagNode);
-        Map<String, String> jobMetadata = TimingEventUtils.getJobMetadata(Maps.newHashMap(), jobExecutionPlan);
-        this.eventSubmitter.get().getTimingEvent(TimingEvent.LauncherTimings.JOB_PENDING).stop(jobMetadata);
-        jobExecutionPlan.setExecutionStatus(PENDING);
-      }
+      DagManagerUtils.submitEventsAndSetStatus(dag, this.eventSubmitter);
     }
   }
 
@@ -723,14 +712,14 @@ public class DagManager extends AbstractIdleService {
      */
     private void finishResumingDags() throws IOException {
       for (Map.Entry<String, Dag<JobExecutionPlan>> dag : this.resumingDags.entrySet()) {
-        JobStatus flowStatus = pollFlowStatus(dag.getValue());
+        JobStatus flowStatus = DagManagerUtils.pollFlowStatus(dag.getValue(), this.jobStatusRetriever, this.jobStatusPolledTimer);
         if (flowStatus == null || !flowStatus.getEventName().equals(PENDING_RESUME.name())) {
           continue;
         }
 
         boolean dagReady = true;
         for (DagNode<JobExecutionPlan> node : dag.getValue().getNodes()) {
-          JobStatus jobStatus = pollJobStatus(node);
+          JobStatus jobStatus = DagManagerUtils.pollJobStatus(node, this.jobStatusRetriever, this.jobStatusPolledTimer);
           if (jobStatus == null || jobStatus.getEventName().equals(FAILED.name()) || jobStatus.getEventName().equals(CANCELLED.name())) {
             dagReady = false;
             break;
@@ -750,7 +739,7 @@ public class DagManager extends AbstractIdleService {
 
     /**
      * Cancels the dag and sends a cancellation tracking event.
-     * @param dagToCancel dag node to cancel
+     * @param dagId dag node to cancel
      * @throws ExecutionException executionException
      * @throws InterruptedException interruptedException
      */
@@ -853,7 +842,7 @@ public class DagManager extends AbstractIdleService {
     /**
      * Proceed the execution of each dag node based on job status.
      */
-    private void pollAndAdvanceDag() throws IOException, ExecutionException, InterruptedException {
+    private void pollAndAdvanceDag() {
       Map<String, Set<DagNode<JobExecutionPlan>>> nextSubmitted = Maps.newHashMap();
       List<DagNode<JobExecutionPlan>> nodesToCleanUp = Lists.newArrayList();
 
@@ -861,7 +850,7 @@ public class DagManager extends AbstractIdleService {
         try {
           boolean slaKilled = slaKillIfNeeded(node);
 
-          JobStatus jobStatus = pollJobStatus(node);
+          JobStatus jobStatus = DagManagerUtils.pollJobStatus(node, this.jobStatusRetriever, this.jobStatusPolledTimer);
 
           boolean killOrphanFlow = killJobIfOrphaned(node, jobStatus);
 
@@ -902,7 +891,7 @@ public class DagManager extends AbstractIdleService {
             this.jobToDag.get(node).setFlowEvent(null);
             submitJob(node);
           }
-        } catch (Exception e) {
+        } catch (InterruptedException | IOException | ExecutionException e) {
           // Error occurred while processing dag, continue processing other dags assigned to this thread
           log.error(String.format("Exception caught in DagManager while processing dag %s due to ",
               DagManagerUtils.getFullyQualifiedDagName(node)), e);
@@ -1013,47 +1002,7 @@ public class DagManager extends AbstractIdleService {
       return false;
     }
 
-    /**
-     * Retrieve the {@link JobStatus} from the {@link JobExecutionPlan}.
-     */
-    private JobStatus pollJobStatus(DagNode<JobExecutionPlan> dagNode) {
-      Config jobConfig = dagNode.getValue().getJobSpec().getConfig();
-      String flowGroup = jobConfig.getString(ConfigurationKeys.FLOW_GROUP_KEY);
-      String flowName = jobConfig.getString(ConfigurationKeys.FLOW_NAME_KEY);
-      long flowExecutionId = jobConfig.getLong(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
-      String jobGroup = jobConfig.getString(ConfigurationKeys.JOB_GROUP_KEY);
-      String jobName = jobConfig.getString(ConfigurationKeys.JOB_NAME_KEY);
 
-      return pollStatus(flowGroup, flowName, flowExecutionId, jobGroup, jobName);
-    }
-
-    /**
-     * Retrieve the flow's {@link JobStatus} (i.e. job status with {@link JobStatusRetriever#NA_KEY} as job name/group) from a dag
-     */
-    private JobStatus pollFlowStatus(Dag<JobExecutionPlan> dag) {
-      if (dag == null || dag.isEmpty()) {
-        return null;
-      }
-      Config jobConfig = dag.getNodes().get(0).getValue().getJobSpec().getConfig();
-      String flowGroup = jobConfig.getString(ConfigurationKeys.FLOW_GROUP_KEY);
-      String flowName = jobConfig.getString(ConfigurationKeys.FLOW_NAME_KEY);
-      long flowExecutionId = jobConfig.getLong(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
-
-      return pollStatus(flowGroup, flowName, flowExecutionId, JobStatusRetriever.NA_KEY, JobStatusRetriever.NA_KEY);
-    }
-
-    private JobStatus pollStatus(String flowGroup, String flowName, long flowExecutionId, String jobGroup, String jobName) {
-      long pollStartTime = System.nanoTime();
-      Iterator<JobStatus> jobStatusIterator =
-          this.jobStatusRetriever.getJobStatusesForFlowExecution(flowName, flowGroup, flowExecutionId, jobName, jobGroup);
-      Instrumented.updateTimer(this.jobStatusPolledTimer, System.nanoTime() - pollStartTime, TimeUnit.NANOSECONDS);
-
-      if (jobStatusIterator.hasNext()) {
-        return jobStatusIterator.next();
-      } else {
-        return null;
-      }
-    }
 
     /**
      * Submit next set of Dag nodes in the Dag identified by the provided dagId
@@ -1192,11 +1141,6 @@ public class DagManager extends AbstractIdleService {
       }
     }
 
-    private boolean hasRunningJobs(String dagId) {
-      List<DagNode<JobExecutionPlan>> dagNodes = this.dagToJobs.get(dagId);
-      return dagNodes != null && !dagNodes.isEmpty();
-    }
-
     /**
      * Perform clean up. Remove a dag from the dagstore if the dag is complete and update internal state.
      */
@@ -1221,7 +1165,7 @@ public class DagManager extends AbstractIdleService {
             deleteJobState(dagId, dagNode);
           }
         }
-        if (!hasRunningJobs(dagId)) {
+        if (!DagManagerUtils.hasRunningJobs(dagId, this.dagToJobs)) {
           // Collect all the dagIds that are finished
           this.dagIdstoClean.add(dagId);
           if (dag.getFlowEvent() == null) {
@@ -1240,7 +1184,7 @@ public class DagManager extends AbstractIdleService {
       for (Iterator<String> dagIdIterator = this.dagIdstoClean.iterator(); dagIdIterator.hasNext();) {
         String dagId = dagIdIterator.next();
         Dag<JobExecutionPlan> dag = this.dags.get(dagId);
-        JobStatus flowStatus = pollFlowStatus(dag);
+        JobStatus flowStatus = DagManagerUtils.pollFlowStatus(dag, this.jobStatusRetriever, this.jobStatusPolledTimer);
         if (flowStatus != null && FlowStatusGenerator.FINISHED_STATUSES.contains(flowStatus.getEventName())) {
           FlowId flowId = DagManagerUtils.getFlowId(dag);
           switch(dag.getFlowEvent()) {

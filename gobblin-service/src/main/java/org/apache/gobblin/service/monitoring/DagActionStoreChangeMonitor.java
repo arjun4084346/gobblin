@@ -40,8 +40,15 @@ import org.apache.gobblin.runtime.kafka.HighLevelConsumer;
 import org.apache.gobblin.runtime.metrics.RuntimeMetrics;
 import org.apache.gobblin.runtime.spec_catalog.FlowCatalog;
 import org.apache.gobblin.service.FlowId;
+import org.apache.gobblin.service.ServiceConfigKeys;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
+import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
+import org.apache.gobblin.service.modules.orchestration.DagTaskStream;
+import org.apache.gobblin.service.modules.orchestration.NewDagManager;
 import org.apache.gobblin.service.modules.orchestration.Orchestrator;
+import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
+import org.apache.gobblin.service.modules.orchestration.task.ResumeDagTask;
+import org.apache.gobblin.util.ConfigUtils;
 
 
 /**
@@ -85,6 +92,8 @@ public class DagActionStoreChangeMonitor extends HighLevelConsumer {
   @Getter
   @VisibleForTesting
   protected FlowCatalog flowCatalog;
+  private DagTaskStream dagTaskStream;
+  private final boolean isMultiLeaderDagManagerEnabled;
 
   // Note that the topic is an empty string (rather than null to avoid NPE) because this monitor relies on the consumer
   // client itself to determine all Kafka related information dynamically rather than through the config.
@@ -98,6 +107,9 @@ public class DagActionStoreChangeMonitor extends HighLevelConsumer {
     this.flowCatalog = flowCatalog;
     this.orchestrator = orchestrator;
     this.isMultiActiveSchedulerEnabled = isMultiActiveSchedulerEnabled;
+    // instantiating using default ctor; subsequent PR will handle instantiating with multi-args ctor
+//    this.dagTaskStream = new DagTaskStream();
+    this.isMultiLeaderDagManagerEnabled = ConfigUtils.getBoolean(config, ServiceConfigKeys.GOBBLIN_SERVICE_MULTI_ACTIVE_DAG_MANAGER_ENABLED_KEY, false);
   }
 
   @Override
@@ -154,9 +166,16 @@ public class DagActionStoreChangeMonitor extends HighLevelConsumer {
         log.info("DagAction change ({}) received for flow: {}", dagActionType, dagAction);
         if (dagActionType.equals(DagActionStore.FlowActionType.RESUME)) {
           dagManager.handleResumeFlowRequest(flowGroup, flowName,Long.parseLong(flowExecutionId));
+          if (isMultiLeaderDagManagerEnabled) {
+            dagTaskStream.addDagTask(new ResumeDagTask(DagManagerUtils.generateNewDagId(flowGroup, flowName, Long.parseLong(flowExecutionId))));
+          }
           this.resumesInvoked.mark();
         } else if (dagActionType.equals(DagActionStore.FlowActionType.KILL)) {
           dagManager.handleKillFlowRequest(flowGroup, flowName, Long.parseLong(flowExecutionId));
+          if (isMultiLeaderDagManagerEnabled) {
+            NewDagManager.DagId dagId = DagManagerUtils.generateNewDagId(flowGroup, flowName, Long.parseLong(flowExecutionId));
+            dagTaskStream.addDagTask(new KillDagTask(dagId));
+          }
           this.killsInvoked.mark();
         } else if (dagActionType.equals(DagActionStore.FlowActionType.LAUNCH)) {
           // If multi-active scheduler is NOT turned on we should not receive these type of events
@@ -166,6 +185,7 @@ public class DagActionStoreChangeMonitor extends HighLevelConsumer {
                 + "mode for flowAction: %s", dagAction));
           }
           submitFlowToDagManagerHelper(dagAction);
+          //TODO: add a flag for if condition only if multi-active is enabled
         } else {
           log.warn("Received unsupported dagAction {}. Expected to be a KILL, RESUME, or LAUNCH", dagActionType);
           this.unexpectedErrors.mark();

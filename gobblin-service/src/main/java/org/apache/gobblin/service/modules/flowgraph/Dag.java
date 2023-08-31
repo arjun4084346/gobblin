@@ -27,13 +27,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.typesafe.config.Config;
 
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 import org.apache.gobblin.annotation.Alpha;
+import org.apache.gobblin.configuration.ConfigurationKeys;
+import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
+
 
 /**
  * An implementation of Dag. Assumes that nodes have unique values. Nodes with duplicate values will produce
@@ -255,10 +262,12 @@ public class Dag<T> {
     private T value;
     //List of parent Nodes that are dependencies of this Node.
     private List<DagNode<T>> parentNodes;
+    private DagNodeId id;
 
     //Constructor
     public DagNode(T value) {
       this.value = value;
+      this.id = createId(((JobExecutionPlan) this.getValue()).getJobSpec().getConfig());
     }
 
     public void addParentNode(DagNode<T> node) {
@@ -284,6 +293,32 @@ public class Dag<T> {
     @Override
     public int hashCode() {
       return this.getValue().hashCode();
+    }
+
+    private static DagNodeId createId(Config jobConfig) {
+      String flowGroup = jobConfig.getString(ConfigurationKeys.FLOW_GROUP_KEY);
+      String flowName =jobConfig.getString(ConfigurationKeys.FLOW_NAME_KEY);
+      long flowExecutionId = jobConfig.getLong(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
+      String jobName = jobConfig.getString(ConfigurationKeys.JOB_NAME_KEY);
+      String jobGroup = jobConfig.getString(ConfigurationKeys.JOB_GROUP_KEY);
+
+      return new DagNodeId(flowGroup, flowName, flowExecutionId, jobGroup, jobName);
+    }
+
+    @Getter
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    public static class DagNodeId {
+      String flowGroup;
+      String flowName;
+      long flowExecutionId;
+      String jobGroup;
+      String jobName;
+
+      @Override
+      public String toString() {
+        return Joiner.on("_").join(flowGroup, flowName, flowExecutionId, jobGroup, jobName);
+      }
     }
   }
 
