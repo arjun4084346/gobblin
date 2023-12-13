@@ -32,7 +32,6 @@ import org.apache.gobblin.instrumented.Instrumented;
 import org.apache.gobblin.metrics.event.TimingEvent;
 import org.apache.gobblin.service.ExecutionStatus;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.service.monitoring.JobStatus;
 
@@ -121,7 +120,7 @@ public class KillDagThread implements Runnable {
           DagManagerUtils.getFullyQualifiedDagName(node),
           timeOutForJobStart);
       this.dagManager.getDagManagerMetrics().incrementCountsStartSlaExceeded(node);
-      this.dagManager.getDagProcessingEngine().addDagTask(new KillDagTask(node.getId()));
+      this.dagManager.getDagProcessingEngine().addKillDagAction(node);
       String dagId = DagManagerUtils.generateDagId(node).toString();
       this.dagManager.getDags().get(dagId).setFlowEvent(TimingEvent.FlowTimings.FLOW_START_DEADLINE_EXCEEDED);
       this.dagManager.getDags().get(dagId).setMessage("Flow killed because no update received for " + timeOutForJobStart + " ms after orchestration");
@@ -157,7 +156,7 @@ public class KillDagThread implements Runnable {
           node.getValue().getJobSpec().getConfig().getString(ConfigurationKeys.FLOW_NAME_KEY), flowSla,
           node.getValue().getJobSpec().getConfig().getString(ConfigurationKeys.JOB_NAME_KEY));
       this.dagManager.getDagManagerMetrics().incrementExecutorSlaExceeded(node);
-      this.dagManager.getDagProcessingEngine().addDagTask(new KillDagTask(node.getId()));
+      this.dagManager.getDagProcessingEngine().addKillDagAction(node);
 
       this.dagManager.getDags().get(dagId).setFlowEvent(TimingEvent.FlowTimings.FLOW_RUN_DEADLINE_EXCEEDED);
       this.dagManager.getDags().get(dagId).setMessage("Flow killed due to exceeding SLA of " + flowSla + " ms");

@@ -17,6 +17,7 @@
 
 package org.apache.gobblin.service.modules.orchestration.proc;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -52,35 +53,29 @@ import static org.apache.gobblin.service.ExecutionStatus.RUNNING;
 @Alpha
 public class AdvanceDagProc extends DagProc<AdvanceDagTask> {
   private AdvanceDagTask advanceDagTask;
+  private Optional<Dag<JobExecutionPlan>> dagToAdvance;
+
 
   public AdvanceDagProc(AdvanceDagTask advanceDagTask, DagProcFactory dagProcFactory) {
     super(dagProcFactory);
     this.advanceDagTask = advanceDagTask;
   }
 
-//  @Override
-//  protected Object initialize(DagManagementStateStore dagManagementStateStore) throws MaybeRetryableException, IOException {
-//    throw new UnsupportedOperationException("Not supported");
-//  }
-//
-//  @Override
-//  protected Object act(Object state, DagManagementStateStore dagManagementStateStore) throws MaybeRetryableException, Exception {
-//    throw new UnsupportedOperationException("Not supported");
-//  }
-//
-//  @Override
-//  protected void sendNotification(Object result, EventSubmitter eventSubmitter) throws MaybeRetryableException, IOException {
-//    throw new UnsupportedOperationException("Not supported");
-//  }
+  @Override
+  protected void initialize() throws IOException {
+    this.dagToAdvance = dagManagementStateStore.getDag(this.advanceDagTask.getAdvanceDagId().toString());
+  }
 
   @Override
-  public void process(AdvanceDagTask dagTask) {
-    // send dag node to orchestrater
-    // sla kill if needed
-    // find next dag nodes to submit and create next AdvanceDagTasks for them
-    Dag.DagNode<JobExecutionPlan> dagNode = this.advanceDagTask.getDagNode();
+  protected void act() throws IOException {
+    if (!this.dagToAdvance.isPresent()) {
+      log.warn("No dag with id " + this.advanceDagTask.getAdvanceDagId() + " found to advance");
+      return;
+    }
+    // todo - find next dag node to run
+    Dag.DagNode<JobExecutionPlan> dagNode = null;//this.advanceDagTask.getDagNode();
 
-    // de duplicate it with LaunchDagProc
+    // todo - de duplicate it with LaunchDagProc
     DagManagerUtils.incrementJobAttempt(dagNode);
     JobExecutionPlan jobExecutionPlan = DagManagerUtils.getJobExecutionPlan(dagNode);
     jobExecutionPlan.setExecutionStatus(RUNNING);

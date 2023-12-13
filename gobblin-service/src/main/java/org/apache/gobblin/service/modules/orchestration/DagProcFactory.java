@@ -58,10 +58,8 @@ import org.apache.gobblin.util.ConfigUtils;
 
 @Alpha
 @Slf4j
-public class DagProcFactory {//implements DagTaskVisitor {
-
-
-  // check what all fields are needed by DagProc implementations
+public class DagProcFactory implements DagTaskVisitor {
+  // todo - check what all fields are needed by DagProc implementations
   public NewDagManager dagManager;
   private JobStatusRetriever jobStatusRetriever;
   private FlowStatusGenerator flowStatusGenerator;
@@ -71,11 +69,14 @@ public class DagProcFactory {//implements DagTaskVisitor {
   private FlowCompilationValidationHelper flowCompilationValidationHelper;
   private Config config;
   public final DagProcessingEngine dagProcessingEngine;
+  public DagManagementStateStore dagManagementStateStore;
+
   Optional<EventSubmitter> eventSubmitter;
 
   public DagProcFactory(Config config, NewDagManager dagManager, JobStatusRetriever jobStatusRetriever,
       FlowStatusGenerator flowStatusGenerator, UserQuotaManager quotaManager, SpecCompiler specCompiler, FlowCatalog flowCatalog,
-      FlowCompilationValidationHelper flowCompilationValidationHelper, boolean instrumentationEnabled, DagProcessingEngine dagProcessingEngine) {
+      FlowCompilationValidationHelper flowCompilationValidationHelper, boolean instrumentationEnabled,
+      DagProcessingEngine dagProcessingEngine, DagManagementStateStore dagManagementStateStore) {
 
     this.config = config;
     this.dagManager = dagManager;
@@ -86,6 +87,7 @@ public class DagProcFactory {//implements DagTaskVisitor {
     this.flowCatalog = flowCatalog;
     this.flowCompilationValidationHelper = flowCompilationValidationHelper;
     this.dagProcessingEngine = dagProcessingEngine;
+    this.dagManagementStateStore = dagManagementStateStore;
     if (instrumentationEnabled) {
       MetricContext metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
       this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
@@ -94,24 +96,39 @@ public class DagProcFactory {//implements DagTaskVisitor {
     }
   }
 
-  public DagProc getDagProcFor(DagTask dagTask) {
-    if (dagTask instanceof LaunchDagTask) {
-      return new LaunchDagProc((LaunchDagTask) dagTask, this);    // check what all fields are needed by DagProc implementations
-    } else if (dagTask instanceof KillDagTask) {
-      return new KillDagProc((KillDagTask) dagTask, this);
-    } else if (dagTask instanceof ResumeDagTask) {
-      return new ResumeDagProc((ResumeDagTask) dagTask, this);
-    } else if (dagTask instanceof AdvanceDagTask) {
-      return new AdvanceDagProc((AdvanceDagTask) dagTask, this);
-    } else if (dagTask instanceof RetryDagTask) {
-      return new RetryDagProc((RetryDagTask) dagTask, this);
-    } else if (dagTask instanceof CleanUpDagTask) {
-      return new CleanUpDagProc((CleanUpDagTask) dagTask, this);
-    } else if (dagTask instanceof ReloadDagTask) {
-      return new ReloadDagProc((ReloadDagTask) dagTask, this);
-    }
+  @Override
+  public DagProc meet(LaunchDagTask launchDagTask) {
+    return new LaunchDagProc(launchDagTask, this);
+  }
 
-    throw new UnsupportedOperationException("Invalid dagTask " + dagTask);
+  @Override
+  public DagProc meet(KillDagTask killDagTask) {
+    return new KillDagProc(killDagTask, this);
+  }
+
+  @Override
+  public Object meet(ReloadDagTask reloadDagTask) {
+    return new ReloadDagProc(reloadDagTask, this);
+  }
+
+  @Override
+  public DagProc meet(ResumeDagTask resumeDagTask) {
+    return new ResumeDagProc(resumeDagTask, this);
+  }
+
+  @Override
+  public DagProc meet(RetryDagTask retryDagTask) {
+    return new RetryDagProc(retryDagTask, this);
+  }
+
+  @Override
+  public DagProc meet(AdvanceDagTask advanceDagTask) {
+    return new AdvanceDagProc(advanceDagTask, this);
+  }
+
+  @Override
+  public DagProc meet(CleanUpDagTask cleanUpDagTask) {
+    return new CleanUpDagProc(cleanUpDagTask, this);
   }
 }
 

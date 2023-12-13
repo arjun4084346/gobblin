@@ -215,7 +215,7 @@ public class GobblinServiceJobScheduler extends JobScheduler implements SpecCata
       throws Exception {
     this(serviceName, config, helixManager, flowCatalog, topologyCatalog,
         new Orchestrator(config, flowStatusGenerator, topologyCatalog, dagManager, dagProcessingEngine, log, flowTriggerHandler,
-            sharedFlowMetricsSingleton),
+            sharedFlowMetricsSingleton, Optional.absent()),
         schedulerService, quotaManager, log, warmStandbyEnabled, flowTriggerHandler);
   }
 

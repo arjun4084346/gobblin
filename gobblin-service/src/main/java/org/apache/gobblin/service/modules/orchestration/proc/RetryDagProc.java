@@ -36,7 +36,6 @@ import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
 import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
-import org.apache.gobblin.service.modules.orchestration.task.AdvanceDagTask;
 import org.apache.gobblin.service.modules.orchestration.task.RetryDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
@@ -49,9 +48,7 @@ import static org.apache.gobblin.service.ExecutionStatus.RUNNING;
 @Slf4j
 @Alpha
 public final class RetryDagProc extends DagProc<RetryDagTask> {
-
   private RetryDagTask retryDagTask;
-
 
   public RetryDagProc(RetryDagTask retryDagTask, DagProcFactory dagProcFactory) {
     super(dagProcFactory);
@@ -59,9 +56,12 @@ public final class RetryDagProc extends DagProc<RetryDagTask> {
   }
 
   @Override
-  public void process(RetryDagTask dagTask) throws IOException {
+  protected void initialize() throws IOException {
+  }
+
+  @Override
+  protected void act() {
     submitJob(this.retryDagTask.getDagNode());
-    this.dagProcFactory.dagProcessingEngine.addDagTask(new AdvanceDagTask(this.retryDagTask.getDagNode()));
   }
 
   /**

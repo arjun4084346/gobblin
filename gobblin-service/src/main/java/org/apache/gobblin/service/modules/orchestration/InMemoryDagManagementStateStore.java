@@ -88,8 +88,8 @@ public class InMemoryDagManagementStateStore implements DagManagementStateStore 
   }
 
   @Override
-  public synchronized void removeDagActionFromStore(DagManager.DagId dagId, DagActionStore.FlowActionType flowActionType) throws IOException {
-    this.dagActionStore.deleteDagAction(new DagActionStore.DagAction(dagId.flowGroup, dagId.flowName, dagId.flowExecutionId, flowActionType));
+  public synchronized void removeDagActionFromStore(DagActionStore.DagAction dagAction) throws IOException {
+    this.dagActionStore.deleteDagAction(dagAction);
   }
 
   @Override

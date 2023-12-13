@@ -21,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
+import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
+import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
 
 /**
@@ -35,5 +37,9 @@ import org.apache.gobblin.service.modules.flowgraph.Dag;
 @Alpha
 @Slf4j
 public class CleanUpDagTask extends DagTask {
-  // todo
+  // todo - implement rest of it
+  @Override
+  public DagProc host(DagTaskVisitor<DagProc> visitor) {
+    return visitor.meet(this);
+  }
 }

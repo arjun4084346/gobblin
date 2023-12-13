@@ -22,9 +22,12 @@ import java.io.IOException;
 import lombok.Getter;
 
 import org.apache.gobblin.annotation.Alpha;
+import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
 import org.apache.gobblin.service.modules.orchestration.DagManagementStateStore;
-import org.apache.gobblin.service.modules.orchestration.NewDagManager;
+import org.apache.gobblin.service.modules.orchestration.DagManager;
+import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
+import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
 import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
 
@@ -36,8 +39,17 @@ import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
 @Alpha
 public abstract class DagTask {
-  @Getter protected NewDagManager.DagId dagId;
-  //private MultiActiveLeaseArbiter.LeaseObtainedStatus leaseObtainedStatus;
+  @Getter public DagActionStore.DagAction dagAction;
+  private MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus;
+  @Getter DagManager.DagId dagId;
+
+  public DagTask(DagActionStore.DagAction dagAction, MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus) {
+    this.dagAction = dagAction;
+    this.leaseObtainedStatus = leaseObtainedStatus;
+    this.dagId = DagManagerUtils.generateDagId(dagAction.getFlowGroup(), dagAction.getFlowName(), dagAction.getFlowExecutionId());
+  }
+
+  public abstract DagProc host(DagTaskVisitor<DagProc> visitor);
 
   /**
    * Currently, conclusion of {@link DagTask} marks and records a successful release of lease.

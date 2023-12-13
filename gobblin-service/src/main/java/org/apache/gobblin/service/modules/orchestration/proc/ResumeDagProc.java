@@ -19,8 +19,11 @@ package org.apache.gobblin.service.modules.orchestration.proc;
 
 import java.io.IOException;
 import java.util.Map;
+
 import com.google.common.collect.Maps;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.metrics.event.TimingEvent;
 import org.apache.gobblin.runtime.api.DagActionStore;
@@ -30,7 +33,6 @@ import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
 import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
 import org.apache.gobblin.service.modules.orchestration.NewDagManager;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
-import org.apache.gobblin.service.modules.orchestration.task.DagTask;
 import org.apache.gobblin.service.modules.orchestration.task.ResumeDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.service.monitoring.JobStatus;
@@ -49,6 +51,9 @@ import static org.apache.gobblin.service.ExecutionStatus.PENDING_RESUME;
 public final class ResumeDagProc extends DagProc {
 
   private ResumeDagTask resumeDagTask;
+  Dag<JobExecutionPlan> dagToResume;
+  NewDagManager.DagId dagIdToResume;
+
 
   public ResumeDagProc(ResumeDagTask resumeDagTask, DagProcFactory dagProcFactory) {
     super(dagProcFactory);
@@ -56,11 +61,14 @@ public final class ResumeDagProc extends DagProc {
   }
 
   @Override
-  public void process(DagTask dagTask) throws IOException {
-    NewDagManager.DagId dagIdToResume = dagTask.getDagId();
-    Dag<JobExecutionPlan> dagToResume = this.dagManager.getFailedDagStateStore().getDag(dagTask.getDagId().toString());
+  protected void initialize() throws IOException {
+    this.dagIdToResume = this.resumeDagTask.getDagId();
+    this.dagToResume = this.dagManager.getFailedDagStateStore().getDag(this.resumeDagTask.getDagId().toString());
+  }
 
-    if (dagToResume == null || !this.dagManager.getFailedDagIds().contains(dagToResume.toString())) {
+  @Override
+  protected void act() throws IOException {
+    if (this.dagToResume == null || !this.dagManager.getFailedDagIds().contains(dagToResume.toString())) {
       log.warn("No dag found with dagId " + dagIdToResume + ", so cannot resume flow");
       this.dagManager.removeDagActionFromStore(dagIdToResume, DagActionStore.FlowActionType.RESUME);
       return;

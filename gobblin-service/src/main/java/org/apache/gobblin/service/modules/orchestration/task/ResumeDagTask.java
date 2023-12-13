@@ -23,7 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
+import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
 import org.apache.gobblin.service.modules.orchestration.NewDagManager;
+import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
 
@@ -43,5 +45,10 @@ public class ResumeDagTask extends DagTask {
 
   public ResumeDagTask(Dag<JobExecutionPlan> dag) {
     this.dag = dag;
+  }
+
+  @Override
+  public DagProc host(DagTaskVisitor<DagProc> visitor) {
+    return visitor.meet(this);
   }
 }

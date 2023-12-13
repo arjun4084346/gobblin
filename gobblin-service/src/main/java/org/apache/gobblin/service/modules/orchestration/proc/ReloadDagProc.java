@@ -39,7 +39,6 @@ import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
 import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
-import org.apache.gobblin.service.modules.orchestration.task.AdvanceDagTask;
 import org.apache.gobblin.service.modules.orchestration.task.ReloadDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
@@ -51,8 +50,10 @@ import static org.apache.gobblin.service.ExecutionStatus.RUNNING;
  */
 @Slf4j
 @Alpha
+// todo - maybe reload need different treatment from other operations, because these are already present in the dag store
 public final class ReloadDagProc extends DagProc<ReloadDagTask> {
   private final ReloadDagTask launchDagTask;
+  private Optional<Dag<JobExecutionPlan>> dagToReload;
 
   public ReloadDagProc(ReloadDagTask launchDagTask, DagProcFactory dagProcFactory) {
     super(dagProcFactory);
@@ -60,10 +61,15 @@ public final class ReloadDagProc extends DagProc<ReloadDagTask> {
   }
 
   @Override
-  public void process(ReloadDagTask dagTask) throws IOException {
-    initializeDag(dagTask.getDag());
+  protected void initialize() throws IOException {
+    this.dagToReload = dagManagementStateStore.getDag(this.launchDagTask.getDagId().toString());
+    initializeDag(dagToReload.get());
+  }
+
+  @Override
+  protected void act() {
     for (Dag.DagNode<JobExecutionPlan> dagNode : this.launchDagTask.getDag().getStartNodes()) {
-      this.dagProcFactory.dagProcessingEngine.addDagTask(new AdvanceDagTask(dagNode));
+      this.dagProcFactory.dagProcessingEngine.addAdvanceDagAction(dagNode);
     }
   }
 

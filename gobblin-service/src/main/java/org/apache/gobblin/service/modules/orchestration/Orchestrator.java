@@ -59,7 +59,6 @@ import org.apache.gobblin.runtime.spec_catalog.TopologyCatalog;
 import org.apache.gobblin.service.ServiceConfigKeys;
 import org.apache.gobblin.service.modules.flow.SpecCompiler;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.service.modules.utils.FlowCompilationValidationHelper;
 import org.apache.gobblin.service.modules.utils.SharedFlowMetricsSingleton;
@@ -84,6 +83,7 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
   protected final SpecCompiler specCompiler;
   protected final Optional<TopologyCatalog> topologyCatalog;
   protected final Optional<DagManager> dagManager;
+  protected final Optional<NewDagManager> newDagManager;
   protected final Optional<DagProcessingEngine> dagProcessingEngine;
 
   protected final MetricContext metricContext;
@@ -111,11 +111,12 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
   public Orchestrator(Config config, Optional<TopologyCatalog> topologyCatalog, Optional<DagManager> dagManager,
       Optional<DagProcessingEngine> dagProcessingEngine, Optional<Logger> log, FlowStatusGenerator flowStatusGenerator,
       boolean instrumentationEnabled, Optional<FlowTriggerHandler> flowTriggerHandler,
-      SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
+      SharedFlowMetricsSingleton sharedFlowMetricsSingleton, Optional<NewDagManager> newDagManager) {
     _log = log.isPresent() ? log.get() : LoggerFactory.getLogger(getClass());
     this.aliasResolver = new ClassAliasResolver<>(SpecCompiler.class);
     this.topologyCatalog = topologyCatalog;
     this.dagManager = dagManager;
+    this.newDagManager = newDagManager;
     this.dagProcessingEngine = dagProcessingEngine;
     this.flowStatusGenerator = flowStatusGenerator;
     this.flowTriggerHandler = flowTriggerHandler;
@@ -165,9 +166,9 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
   @Inject
   public Orchestrator(Config config, FlowStatusGenerator flowStatusGenerator, Optional<TopologyCatalog> topologyCatalog,
       Optional<DagManager> dagManager, Optional<DagProcessingEngine> dagProcessingEngine, Optional<Logger> log,
-      Optional<FlowTriggerHandler> flowTriggerHandler, SharedFlowMetricsSingleton sharedFlowMetricsSingleton) {
+      Optional<FlowTriggerHandler> flowTriggerHandler, SharedFlowMetricsSingleton sharedFlowMetricsSingleton, Optional<NewDagManager> newDagManager) {
     this(config, topologyCatalog, dagManager, dagProcessingEngine, log, flowStatusGenerator, true,
-        flowTriggerHandler, sharedFlowMetricsSingleton);
+        flowTriggerHandler, sharedFlowMetricsSingleton, newDagManager);
   }
 
 
@@ -384,14 +385,23 @@ public class Orchestrator implements SpecCatalogListener, Instrumentable {
     // .. this will work for Identity compiler but not always for multi-hop.
     // Note: Current logic assumes compilation is consistent between all executions
     if (spec instanceof FlowSpec) {
+      URI specUri = spec.getUri();
       //Send the dag to the DagManager to stop it.
       //Also send it to the SpecProducer to do any cleanup tasks on SpecExecutor.
       if (this.dagManager.isPresent()) {
-        _log.info("Forwarding cancel request for flow URI {} to DagManager.", spec.getUri());
-        this.dagManager.get().stopDag(spec.getUri());
+        _log.info("Forwarding cancel request for flow URI {} to DagManager.", specUri);
+        this.dagManager.get().stopDag(specUri);
       }
       if (this.dagProcessingEngine.isPresent()) {
-        this.dagProcessingEngine.get().addDagTask(new KillDagTask(spec.getUri()));
+        String flowGroup = FlowSpec.Utils.getFlowGroup(specUri);
+        String flowName = FlowSpec.Utils.getFlowName(specUri);
+        List<Long> flowExecutionIds = this.newDagManager.get().getJobStatusRetriever().getLatestExecutionIdsForFlow
+            (flowName, flowGroup, 10);
+        _log.info("Found {} flows to cancel.", flowExecutionIds.size());
+        for (long flowExecutionId : flowExecutionIds) {
+          DagActionStore.DagAction dagAction = DagManagerUtils.createDagAction(flowGroup, flowName, String.valueOf(flowExecutionId), DagActionStore.FlowActionType.KILL);
+          this.dagProcessingEngine.get().addDagAction(dagAction);
+        }
       }
       // We need to recompile the flow to find the spec producer,
       // If compilation result is different, its remove request can go to some different spec producer

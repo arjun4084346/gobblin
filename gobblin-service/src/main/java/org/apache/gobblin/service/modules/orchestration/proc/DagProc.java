@@ -44,6 +44,7 @@ import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
 import org.apache.gobblin.service.FlowId;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
+import org.apache.gobblin.service.modules.orchestration.DagManagementStateStore;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
 import org.apache.gobblin.service.modules.orchestration.DagManagerMetrics;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
@@ -71,6 +72,7 @@ public abstract class DagProc<T extends DagTask> {
   protected final UserQuotaManager quotaManager;
   protected final Optional<EventSubmitter> eventSubmitter;
   protected DagStateStore dagStateStore;
+  protected DagManagementStateStore dagManagementStateStore;
   protected final AtomicLong orchestrationDelay;
   protected final NewDagManager dagManager;
   protected final DagManagerMetrics dagManagerMetrics = new DagManagerMetrics();
@@ -80,6 +82,7 @@ public abstract class DagProc<T extends DagTask> {
     // todo make it cleaner
     this.dagProcFactory = dagProcFactory;
     this.dagManager = dagProcFactory.dagManager;
+    this.dagManagementStateStore = dagProcFactory.dagManagementStateStore;
     this.metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
     this.quotaManager = this.dagManager.getQuotaManager();
     this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
@@ -90,7 +93,15 @@ public abstract class DagProc<T extends DagTask> {
     metricContext.register(orchestrationDelayMetric);
   }
 
-  abstract public void process(T dagTask) throws IOException;
+  public void process(DagTask dagTask) throws IOException {
+    initialize();
+    act();
+  }
+
+  protected abstract void initialize() throws IOException;
+
+  protected abstract void act() throws IOException;
+
 
   protected void initializeDag(Dag<JobExecutionPlan> dag)
       throws IOException {

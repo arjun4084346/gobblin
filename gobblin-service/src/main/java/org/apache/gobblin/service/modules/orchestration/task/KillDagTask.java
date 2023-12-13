@@ -18,11 +18,15 @@
 package org.apache.gobblin.service.modules.orchestration.task;
 
 import java.net.URI;
+
 import lombok.Getter;
 
 import org.apache.gobblin.annotation.Alpha;
+import org.apache.gobblin.runtime.api.DagActionStore;
+import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.orchestration.NewDagManager;
+import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
+import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
 
 /**
@@ -33,15 +37,12 @@ public class KillDagTask extends DagTask {
   @Getter Dag.DagNode.DagNodeId dagNodeId;
   @Getter URI uri;
 
-  public KillDagTask(Dag.DagNode.DagNodeId dagNodeId) {
-    this.dagNodeId = dagNodeId;
+  public KillDagTask(DagActionStore.DagAction dagAction, MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus) {
+    super(dagAction, leaseObtainedStatus);
   }
 
-  public KillDagTask(NewDagManager.DagId dagId) {
-    this.dagId = dagId;
-  }
-
-  public KillDagTask(URI uri) {
-    this.uri = uri;
+  @Override
+  public DagProc host(DagTaskVisitor<DagProc> visitor) {
+    return visitor.meet(this);
   }
 }

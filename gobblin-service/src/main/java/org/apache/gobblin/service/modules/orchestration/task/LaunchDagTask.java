@@ -17,13 +17,13 @@
 
 package org.apache.gobblin.service.modules.orchestration.task;
 
-
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
-import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
+import org.apache.gobblin.runtime.api.DagActionStore;
+import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
+import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
+import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
 
 /**
@@ -33,9 +33,13 @@ import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 @Slf4j
 @Alpha
 public class LaunchDagTask extends DagTask {
-  @Getter private final Dag<JobExecutionPlan> dag;
+  public LaunchDagTask(DagActionStore.DagAction dagAction, MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus) {
+    super(dagAction, leaseObtainedStatus);
+  }
 
-  public LaunchDagTask(Dag<JobExecutionPlan> dag) {
-    this.dag = dag;
+
+  @Override
+  public DagProc host(DagTaskVisitor<DagProc> visitor) {
+    return visitor.meet(this);
   }
 }

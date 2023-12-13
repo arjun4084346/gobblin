@@ -18,13 +18,14 @@
 package org.apache.gobblin.service.modules.orchestration.proc;
 
 import java.io.IOException;
-import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.configuration.ConfigurationKeys;
 import org.apache.gobblin.metrics.event.TimingEvent;
-import org.apache.gobblin.runtime.api.FlowSpec;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
 import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
@@ -52,57 +52,27 @@ import static org.apache.gobblin.service.ExecutionStatus.CANCELLED;
 public final class KillDagProc extends DagProc<KillDagTask> {
 
   private KillDagTask killDagTask;
+  private final List<Dag.DagNode<JobExecutionPlan>> dagNodesToCancel = new ArrayList<>();
+  private Optional<Dag<JobExecutionPlan>> dagToCancel;
 
   public KillDagProc(KillDagTask killDagTask, DagProcFactory dagProcFactory) {
     super(dagProcFactory);
     this.killDagTask = killDagTask;
   }
 
+  protected void initialize() throws IOException {
+    this.dagNodesToCancel.addAll(this.dagManager.getDagToJobs().get(this.killDagTask.getDagId().toString()));
+    this.dagToCancel = dagManagementStateStore.getDag(this.killDagTask.getDagId().toString());
+  }
+
   @Override
-  public void process(KillDagTask dagTask) throws IOException {
-    if (dagTask.getDagId() != null) {
-      String dagId = dagTask.getDagId().toString();
-      killByDagId(dagId);
+  public void act() throws IOException {
+    if (this.dagNodesToCancel.isEmpty() || !this.dagToCancel.isPresent()) {
+      log.warn("No dag with id " + this.killDagTask.getDagId() + " found to kill");
+      return;
     }
-    if (dagTask.getDagNodeId() != null) {
-      String dagNodeId = dagTask.getDagNodeId().toString();
-      killByDagNodeId(dagNodeId);
-    }
-    if (dagTask.getUri() != null) {
-      URI uri = dagTask.getUri();
-      killByUri(uri);
-    }
-  }
-
-  private void killByUri(URI uri) throws IOException {
-    String flowGroup = FlowSpec.Utils.getFlowGroup(uri);
-    String flowName = FlowSpec.Utils.getFlowName(uri);
-    List<Long> flowExecutionIds = this.dagManager.getJobStatusRetriever().getLatestExecutionIdsForFlow
-        (flowName, flowGroup, 10);
-    log.info("Found {} flows to cancel.", flowExecutionIds.size());
-    for (long flowExecutionId : flowExecutionIds) {
-      killByDagId(DagManagerUtils.generateDagId(flowGroup, flowName, flowExecutionId).toString());
-    }
-  }
-
-  private void killByDagNodeId(String dagNodeId) throws IOException {
-    if (this.dagManager.getDagNodes().containsKey(dagNodeId)) {
-      cancelDagNode(this.dagManager.getDagNodes().get(dagNodeId));
-    } else {
-      log.warn("Dag node to cancel " + dagNodeId+ " not found.");
-    }
-  }
-
-  private void killByDagId(String dagId)
-      throws IOException {
-    if (this.dagManager.getDagToJobs().containsKey(dagId)) {
-      List<Dag.DagNode<JobExecutionPlan>> dagNodesToCancel =
-          this.dagManager.getDagToJobs().get(dagId);
-      for (Dag.DagNode<JobExecutionPlan> dagNodeToCancel : dagNodesToCancel) {
-        cancelDagNode(dagNodeToCancel);
-      }
-    } else {
-      log.warn("Dag to cancel " + dagId + " not found.");
+    for (Dag.DagNode<JobExecutionPlan> dagNodeToCancel : this.dagNodesToCancel) {
+      cancelDagNode(dagNodeToCancel);
     }
   }
 
@@ -120,6 +90,9 @@ public final class KillDagProc extends DagProc<KillDagTask> {
             dagNodeToCancel.getValue().getJobSpec().getConfig().getString(ConfigurationKeys.FLOW_EXECUTION_ID_KEY));
       }
       DagManagerUtils.getSpecProducer(dagNodeToCancel).cancelJob(dagNodeToCancel.getValue().getJobSpec().getUri(), props);
+      this.dagToCancel.get().setFlowEvent(TimingEvent.FlowTimings.FLOW_CANCELLED);
+      this.dagToCancel.get().setMessage("Flow killed by request");
+      this.dagManagementStateStore.removeDagActionFromStore(this.killDagTask.getDagAction());
     } catch (ExecutionException | InterruptedException e) {
       throw new IOException(e);
     }

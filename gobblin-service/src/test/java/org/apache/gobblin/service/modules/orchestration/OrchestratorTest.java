@@ -109,7 +109,7 @@ public class OrchestratorTest {
     this.orchestrator = new Orchestrator(ConfigUtils.propertiesToConfig(orchestratorProperties),
         this.mockStatusGenerator, Optional.of(this.topologyCatalog), Optional.absent(), Optional.absent(),
         Optional.of(logger), Optional.of(this._mockFlowTriggerHandler), new SharedFlowMetricsSingleton(
-             ConfigUtils.propertiesToConfig(orchestratorProperties)));
+             ConfigUtils.propertiesToConfig(orchestratorProperties)), Optional.absent());
     this.topologyCatalog.addListener(orchestrator);
     this.flowCatalog.addListener(orchestrator);
     // Start application

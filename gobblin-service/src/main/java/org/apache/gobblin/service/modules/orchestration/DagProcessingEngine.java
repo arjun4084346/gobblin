@@ -33,14 +33,12 @@ import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.instrumented.Instrumented;
 import org.apache.gobblin.metrics.MetricContext;
 import org.apache.gobblin.metrics.event.EventSubmitter;
+import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
 import org.apache.gobblin.service.ServiceConfigKeys;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
-import org.apache.gobblin.service.modules.orchestration.task.AdvanceDagTask;
 import org.apache.gobblin.service.modules.orchestration.task.DagTask;
-import org.apache.gobblin.service.modules.orchestration.task.LaunchDagTask;
-import org.apache.gobblin.service.modules.orchestration.task.RetryDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.util.ConfigUtils;
 
@@ -81,20 +79,28 @@ public class DagProcessingEngine {
   }
 
   public void addNewDag(Dag<JobExecutionPlan> dag) {
-    DagTask dagTask = new LaunchDagTask(dag);
-    this.dagTaskStream.addDagTask(dagTask);
+    this.dagTaskStream.addDagAction(DagManagerUtils.createDagAction(dag, DagActionStore.FlowActionType.LAUNCH));
   }
 
   public void addDagNodeToRetry(Dag.DagNode<JobExecutionPlan> dagNode) {
-    this.dagTaskStream.addDagTask(new RetryDagTask(dagNode));
+    // todo - how to add dag action for for a dag node? should we create a dag node action? right now dag action is synonymous to flow action
+    // this.dagTaskStream.addDagTask(new RetryDagTask(dagNode));
   }
 
-  public void addAdvanceDagTask(Dag.DagNode<JobExecutionPlan> dagNode) {
-    this.dagTaskStream.addDagTask(new AdvanceDagTask(dagNode));
+  public void addKillDagAction(Dag<JobExecutionPlan> dag) {
+    this.dagTaskStream.addDagAction(DagManagerUtils.createDagAction(dag, DagActionStore.FlowActionType.KILL));
   }
 
-  public void addDagTask(DagTask dagTask) {
-    this.dagTaskStream.addDagTask(dagTask);
+  public void addKillDagAction(Dag.DagNode<JobExecutionPlan> dagNode) {
+    this.dagTaskStream.addDagAction(DagManagerUtils.createDagAction(dagNode, DagActionStore.FlowActionType.KILL));
+  }
+
+  public void addAdvanceDagAction(Dag.DagNode<JobExecutionPlan> dagNode) {
+    this.dagTaskStream.addDagAction(DagManagerUtils.createDagAction(dagNode, DagActionStore.FlowActionType.ADVANCE));
+  }
+
+  public void addDagAction(DagActionStore.DagAction dagAction) {
+    this.dagTaskStream.addDagAction(dagAction);
   }
 
   @AllArgsConstructor
@@ -107,9 +113,10 @@ public class DagProcessingEngine {
     public void run() {
       for (DagTaskStream it = dagTaskStream; it.hasNext(); ) {
         DagTask dagTask = it.next();
-        DagProc dagProc = dagProcFactory.getDagProcFor(dagTask);
+        DagProc dagProc = dagTask.host(dagProcFactory);
 //          dagProc.process(eventSubmitter.get(), maxRetryAttempts, delayRetryMillis);
         try {
+          // todo - add retries
           dagProc.process(dagTask);
         } catch (IOException e) {
           throw new RuntimeException(e);

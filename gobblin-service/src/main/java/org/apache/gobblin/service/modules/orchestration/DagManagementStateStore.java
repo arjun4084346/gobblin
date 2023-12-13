@@ -41,7 +41,7 @@ public interface DagManagementStateStore {
 
   public boolean hasRunningJobs(String dagId);
 
-  public void removeDagActionFromStore(DagManager.DagId dagId, DagActionStore.FlowActionType flowActionType) throws IOException;
+  public void removeDagActionFromStore(DagActionStore.DagAction dagAction) throws IOException;
 
 //  public void addDagStartDeadline(String dagId, Long flowStartSla);
 //  public Long getDagStartDeadline(String dagId);

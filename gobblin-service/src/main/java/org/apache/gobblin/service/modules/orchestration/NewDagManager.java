@@ -65,9 +65,6 @@ import org.apache.gobblin.service.FlowId;
 import org.apache.gobblin.service.ServiceConfigKeys;
 import org.apache.gobblin.service.modules.flow.SpecCompiler;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
-import org.apache.gobblin.service.modules.orchestration.task.ReloadDagTask;
-import org.apache.gobblin.service.modules.orchestration.task.ResumeDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 import org.apache.gobblin.service.modules.utils.FlowCompilationValidationHelper;
 import org.apache.gobblin.service.modules.utils.SharedFlowMetricsSingleton;
@@ -369,7 +366,8 @@ public class NewDagManager implements DagManagement {
     List<Dag<JobExecutionPlan>> dags = this.dagStateStore.getDags();
     log.info("Loading " + dags.size() + " dags from dag state store");
     for (Dag<JobExecutionPlan> dag : dags) {
-      this.dagProcessingEngine.addDagTask(new ReloadDagTask(dag));
+      // todo - reloaded dags should have a new type of FlowActionType
+      this.dagProcessingEngine.addNewDag(dag);
     }
   }
 
@@ -391,10 +389,10 @@ public class NewDagManager implements DagManagement {
   public void handleKillFlowEvent(KillFlowEvent killFlowEvent) {
     String flowGroup = killFlowEvent.getFlowGroup();
     String flowName = killFlowEvent.getFlowName();
-    long flowExecutionId = killFlowEvent.getFlowExecutionId();
+    String flowExecutionId = String.valueOf(killFlowEvent.getFlowExecutionId());
     log.info("Received kill request for flow ({}, {}, {})", flowGroup, flowName, flowExecutionId);
-    DagId dagId = new DagId(flowGroup, flowName, flowExecutionId);
-    this.dagProcessingEngine.addDagTask(new KillDagTask(dagId));
+    this.dagProcessingEngine.addDagAction(DagManagerUtils.createDagAction(flowGroup, flowName, flowExecutionId,
+        DagActionStore.FlowActionType.KILL));
   }
 
   public void handleLaunchFlowEvent(DagActionStore.DagAction launchAction) {
@@ -433,11 +431,11 @@ public class NewDagManager implements DagManagement {
   public void handleResumeFlowEvent(ResumeFlowEvent resumeFlowEvent) throws IOException {
     String flowGroup = resumeFlowEvent.getFlowGroup();
     String flowName = resumeFlowEvent.getFlowName();
-    long flowExecutionId = resumeFlowEvent.getFlowExecutionId();
+    String flowExecutionId = String.valueOf(resumeFlowEvent.getFlowExecutionId());
     log.info("Received resume request for flow ({}, {}, {})", flowGroup, flowName, flowExecutionId);
-    DagId dagIdToResume = new DagId(flowGroup, flowName, flowExecutionId);
 
-    this.dagProcessingEngine.addDagTask(new ResumeDagTask(dagIdToResume));
+    // todo - persist dag action instead of directly adding to the stream
+    this.dagProcessingEngine.addDagAction(DagManagerUtils.createDagAction(flowGroup, flowName, flowExecutionId, DagActionStore.FlowActionType.RESUME));
   }
 
   public void removeDagActionFromStore(DagId dagIdToResume, DagActionStore.FlowActionType flowActionType)
@@ -581,7 +579,7 @@ public class NewDagManager implements DagManagement {
 
     //Submit jobs from the dag ready for execution.
     for (Dag.DagNode<JobExecutionPlan> dagNode : nextNodes) {
-      this.dagProcessingEngine.addAdvanceDagTask(dagNode);
+      this.dagProcessingEngine.addAdvanceDagAction(dagNode);
       nextJobNames.add(DagManagerUtils.getJobName(dagNode));
     }
     log.info("Submitting next nodes for dagId {}, where next jobs to be submitted are {}", dagId, nextJobNames);

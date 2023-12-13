@@ -41,6 +41,7 @@ import org.apache.gobblin.configuration.ConfigurationKeys;
 import org.apache.gobblin.instrumented.Instrumented;
 import org.apache.gobblin.metrics.event.EventSubmitter;
 import org.apache.gobblin.metrics.event.TimingEvent;
+import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.JobSpec;
 import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
@@ -67,6 +68,25 @@ public class DagManagerUtils {
   public static FlowId getFlowId(Dag<JobExecutionPlan> dag) {
     return getFlowId(dag.getStartNodes().get(0));
   }
+
+  public static DagActionStore.DagAction createDagAction(Dag<JobExecutionPlan> dag, DagActionStore.FlowActionType flowActionType) {
+    return createDagAction(dag.getStartNodes().get(0), flowActionType);
+  }
+
+  public static DagActionStore.DagAction createDagAction(String flowGroup, String flowName, String flowExecutionId, DagActionStore.FlowActionType flowActionType) {
+    return new DagActionStore.DagAction(flowGroup, flowName, flowExecutionId, flowActionType);
+  }
+
+  // todo - dag action object does not have any identifier to tell if it is for a complete dag or just for one dag node
+  public static DagActionStore.DagAction createDagAction(DagNode<JobExecutionPlan> dagNode, DagActionStore.FlowActionType flowActionType) {
+    Config jobConfig = dagNode.getValue().getJobSpec().getConfig();
+    String flowGroup = jobConfig.getString(ConfigurationKeys.FLOW_GROUP_KEY);
+    String flowName =  jobConfig.getString(ConfigurationKeys.FLOW_NAME_KEY);
+    String flowExecutionId = jobConfig.getString(ConfigurationKeys.FLOW_EXECUTION_ID_KEY);
+    return createDagAction(flowGroup, flowName, flowExecutionId, flowActionType);
+  }
+
+
 
   static FlowId getFlowId(DagNode<JobExecutionPlan> dagNode) {
     Config jobConfig = dagNode.getValue().getJobSpec().getConfig();

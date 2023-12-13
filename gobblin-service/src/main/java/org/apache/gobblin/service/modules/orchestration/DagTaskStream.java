@@ -19,14 +19,22 @@ package org.apache.gobblin.service.modules.orchestration;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import com.google.common.base.Optional;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
+import org.apache.gobblin.runtime.api.DagActionStore;
+import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
+import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.task.DagTask;
+import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
+import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
 
 /**
@@ -41,7 +49,10 @@ import org.apache.gobblin.service.modules.orchestration.task.DagTask;
 
 // change to iterable
 public class DagTaskStream implements Iterator<DagTask>{
-  private BlockingQueue<DagTask> dagActionQueue;
+  private BlockingQueue<DagActionStore.DagAction> dagActionQueue;
+  //private FlowTriggerHandler flowTriggerHandler;
+  private DagManagementStateStore dagManagementStateStore;
+
   public DagTaskStream() {
     this.dagActionQueue = new LinkedBlockingDeque<>();
   }
@@ -53,20 +64,47 @@ public class DagTaskStream implements Iterator<DagTask>{
 
   @Override
   public DagTask next() {
-    DagTask dagTask = this.dagActionQueue.poll();
-    assert dagTask != null;
+    DagActionStore.DagAction dagAction = this.dagActionQueue.poll();
     try {
       // todo reconsider the use of MultiActiveLeaseArbiter
-//      MultiActiveLeaseArbiter.LeaseAttemptStatus leaseAttemptStatus =
-//          flowTriggerHandler.getLeaseOnDagAction(jobProps, dagAction, System.currentTimeMillis());
-//      if (leaseAttemptStatus instanceof MultiActiveLeaseArbiter.LeaseObtainedStatus) {
+      //MultiActiveLeaseArbiter.LeaseAttemptStatus leaseAttemptStatus = new MultiActiveLeaseArbiter.LeaseObtainedStatus(dagAction);
+      // todo - uncomment after flow trigger handler provides such an api
+      //Properties jobProps = getJobProperties(dagAction);
+      //flowTriggerHandler.getLeaseOnDagAction(jobProps, dagAction, System.currentTimeMillis());
+      //if (leaseAttemptStatus instanceof MultiActiveLeaseArbiter.LeaseObtainedStatus) {
         // can it return null? is this iterator allowed to return null?
-        return dagTask;
+        return createDagTask(dagAction, new MultiActiveLeaseArbiter.LeaseObtainedStatus(dagAction, System.currentTimeMillis()));
       //}
     } catch (Exception e) {
       //TODO: need to handle exceptions gracefully
       log.error("Error creating DagTask", e);
-      return null;
+    }
+    return null;
+  }
+
+  // todo - move it to dag action class, and move the entire dag action class to gobblin-service module
+  private Properties getJobProperties(DagActionStore.DagAction dagAction) {
+    String dagId = String.valueOf(
+        DagManagerUtils.generateDagId(dagAction.getFlowGroup(), dagAction.getFlowName(), dagAction.getFlowExecutionId()));
+    Optional<Dag<JobExecutionPlan>> dag = dagManagementStateStore.getDag(dagId);
+    if (dag.isPresent()) {
+      return dag.get().getStartNodes().get(0).getValue().getJobSpec().getConfigAsProperties();
+    } else {
+      throw new RuntimeException("DagAction " + dagAction + " does not exist in dag management state store");
+    }
+  }
+
+  private DagTask createDagTask(DagActionStore.DagAction dagAction,
+      MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus) {
+    DagActionStore.FlowActionType flowActionType = dagAction.getFlowActionType();
+    switch (flowActionType) {
+      case KILL:
+        return new KillDagTask(dagAction, leaseObtainedStatus);
+      case RESUME:
+      case LAUNCH:
+      case ADVANCE:
+      default:
+       throw new UnsupportedOperationException("Yet to provide implementation.");
     }
   }
 
@@ -74,7 +112,7 @@ public class DagTaskStream implements Iterator<DagTask>{
     //dagTask.conclude(this.flowTriggerHandler.getMultiActiveLeaseArbiter());
   }
 
-  public void addDagTask(DagTask dagTask) {
-    this.dagActionQueue.add(dagTask);
+  public void addDagAction(DagActionStore.DagAction dagAction) {
+    this.dagActionQueue.add(dagAction);
   }
 }
