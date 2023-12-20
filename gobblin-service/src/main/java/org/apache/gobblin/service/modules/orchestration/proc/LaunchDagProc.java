@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.task.LaunchDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
@@ -38,8 +38,8 @@ public class LaunchDagProc extends DagProc<LaunchDagTask> {
   private final LaunchDagTask launchDagTask;
   private Dag<JobExecutionPlan> dag;
 
-  public LaunchDagProc(LaunchDagTask launchDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public LaunchDagProc(LaunchDagTask launchDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.launchDagTask = launchDagTask;
   }
 
@@ -61,8 +61,8 @@ public class LaunchDagProc extends DagProc<LaunchDagTask> {
     }
     this.dagStateStore.writeCheckpoint(this.dag);
     for (Dag.DagNode<JobExecutionPlan> dagNode : this.dag.getStartNodes()) {
-      this.dagProcFactory.dagProcessingEngine.addAdvanceDagAction(dagNode);
+      this.dagProcessingEngine.addDagAction(dagNode);
     }
-    DagManagerUtils.submitEventsAndSetStatus(this.dag, this.eventSubmitter);
+    DagManagerUtils.submitInitializationEventsAndSetStatus(this.dag, this.eventSubmitter);
   }
 }

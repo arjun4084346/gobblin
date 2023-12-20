@@ -27,11 +27,11 @@ import org.apache.gobblin.service.modules.orchestration.task.RetryDagTask;
 
 
 public interface DagTaskVisitor<D> {
-  D meet(LaunchDagTask launchDagTask);
-  D meet(KillDagTask killDagTask);
-  D meet(ReloadDagTask killDagTask);
-  D meet(ResumeDagTask resumeDagTask);
-  D meet(RetryDagTask retryDagTask);
-  D meet(AdvanceDagTask advanceDagTask);
-  D meet(CleanUpDagTask cleanUpDagTask);
+  D meet(LaunchDagTask launchDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(KillDagTask killDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(ReloadDagTask killDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(ResumeDagTask resumeDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(RetryDagTask retryDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(AdvanceDagTask advanceDagTask, DagProcessingEngine dagProcessingEngine);
+  D meet(CleanUpDagTask cleanUpDagTask, DagProcessingEngine dagProcessingEngine);
 }

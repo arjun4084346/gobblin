@@ -34,7 +34,7 @@ import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
 import org.apache.gobblin.service.modules.orchestration.task.RetryDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
@@ -51,7 +51,7 @@ public final class RetryDagProc extends DagProc<RetryDagTask> {
   private RetryDagTask retryDagTask;
   private Optional<Dag.DagNode<JobExecutionPlan>> dagNodeToRetry;
 
-  public RetryDagProc(RetryDagTask retryDagTask, DagProcFactory dagProcFactory) {
+  public RetryDagProc(RetryDagTask retryDagTask, DagProcessingEngine dagProcFactory) {
     super(dagProcFactory);
     this.retryDagTask = retryDagTask;
   }

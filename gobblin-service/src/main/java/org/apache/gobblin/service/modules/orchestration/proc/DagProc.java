@@ -44,10 +44,11 @@ import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
 import org.apache.gobblin.service.FlowId;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
+import org.apache.gobblin.service.modules.orchestration.DagManagementStateStore;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
 import org.apache.gobblin.service.modules.orchestration.DagManagerMetrics;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.DagStateStore;
 import org.apache.gobblin.service.modules.orchestration.NewDagManager;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
@@ -66,41 +67,41 @@ import static org.apache.gobblin.service.ExecutionStatus.RUNNING;
  */
 @Alpha
 @Slf4j
-public abstract class DagProc<T extends DagTask> {
-  protected final DagProcFactory dagProcFactory;
+public abstract class DagProc<S, T> {
+  protected final DagProcessingEngine dagProcessingEngine;
   protected final UserQuotaManager quotaManager;
   protected final Optional<EventSubmitter> eventSubmitter;
+  private final DagTask dagTask;
   protected DagStateStore dagStateStore;
   protected final AtomicLong orchestrationDelay;
   protected final NewDagManager dagManager;
   protected final DagManagerMetrics dagManagerMetrics = new DagManagerMetrics();
   private final MetricContext metricContext;
 
-  public DagProc(DagProcFactory dagProcFactory) {
-    // todo make it cleaner
-    this.dagProcFactory = dagProcFactory;
-    this.dagManager = dagProcFactory.dagManager;
-    this.metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
+  public DagProc(DagProcessingEngine dagProcessingEngine) {
+    this.dagProcessingEngine = dagProcessingEngine;
+    this.dagManager = this.dagProcessingEngine.getDagManager();
     this.quotaManager = this.dagManager.getQuotaManager();
-    this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
     this.dagStateStore = this.dagManager.getDagStateStore();
+    this.metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
+    this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
     this.orchestrationDelay = new AtomicLong(0);
     ContextAwareGauge<Long> orchestrationDelayMetric = metricContext.newContextAwareGauge(ServiceMetricNames.FLOW_ORCHESTRATION_DELAY,
         orchestrationDelay::get);
     metricContext.register(orchestrationDelayMetric);
   }
 
-  public void process(DagTask dagTask) throws IOException {
-    initialize();
-    act();
-    commit();
+  public void process(DagManagementStateStore dagManagementStateStore) throws IOException {
+    S state = initialize(dagManagementStateStore);   //retry
+    T result = act(dagManagementStateStore, state);   //retry
+    commit(dagManagementStateStore, result);   //retry
   }
 
-  protected abstract void initialize() throws IOException;
+  protected abstract S initialize(DagManagementStateStore dagManagementStateStore) throws IOException;
 
-  protected abstract void act() throws IOException;
+  protected abstract T act(DagManagementStateStore dagManagementStateStore, S state) throws IOException;
 
-  private void commit() {
+  private void commit(DagManagementStateStore dagManagementStateStore, T result) {
     // todo - commit the modified dags to the persistent store
   }
 

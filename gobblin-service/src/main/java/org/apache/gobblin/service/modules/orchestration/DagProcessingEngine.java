@@ -27,6 +27,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
@@ -62,8 +63,10 @@ public class DagProcessingEngine {
 
   private final DagTaskStream dagTaskStream;
   Optional<EventSubmitter> eventSubmitter;
+  @Getter NewDagManager dagManager;
 
-  public DagProcessingEngine(Config config, DagTaskStream dagTaskStream, DagProcFactory dagProcFactory, MultiActiveLeaseArbiter multiActiveLeaseArbiter) {
+  public DagProcessingEngine(Config config, DagTaskStream dagTaskStream, DagProcFactory dagProcFactory,
+      NewDagManager dagManager, MultiActiveLeaseArbiter multiActiveLeaseArbiter) {
     MetricContext metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
     this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
     Integer numThreads = ConfigUtils.getInt(config, NUM_THREADS_KEY, DEFAULT_NUM_THREADS);
@@ -72,7 +75,7 @@ public class DagProcessingEngine {
     this.dagTaskStream = dagTaskStream;
 
     for (int i=0; i < numThreads; i++) {
-      DagProcEngineThread dagProcEngineThread = new DagProcEngineThread(dagTaskStream, dagProcFactory);
+      DagProcEngineThread dagProcEngineThread = new DagProcEngineThread(dagTaskStream, dagProcFactory, this);
       scheduledExecutorPool.scheduleAtFixedRate(dagProcEngineThread, 0, pollingInterval, TimeUnit.SECONDS);
     }
   }
@@ -107,16 +110,17 @@ public class DagProcessingEngine {
 
     private DagTaskStream dagTaskStream;
     private DagProcFactory dagProcFactory;
+    private DagProcessingEngine dagProcessingEngine;
 
     @Override
     public void run() {
-      for (DagTaskStream it = dagTaskStream; it.hasNext(); ) {
-        DagTask dagTask = it.next();
-        DagProc dagProc = dagTask.host(dagProcFactory);
+      while (dagTaskStream.hasNext()) {
+        DagTask dagTask = dagTaskStream.next();
+        DagProc dagProc = dagTask.host(dagProcFactory, dagProcessingEngine);
 //          dagProc.process(eventSubmitter.get(), maxRetryAttempts, delayRetryMillis);
         try {
           // todo - add retries
-          dagProc.process(dagTask);
+          dagProc.process();
         } catch (IOException e) {
           throw new RuntimeException(e);
         }

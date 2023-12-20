@@ -27,6 +27,7 @@ import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
 import org.apache.gobblin.service.modules.orchestration.DagManagementStateStore;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
 import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
@@ -49,7 +50,7 @@ public abstract class DagTask {
     this.dagId = DagManagerUtils.generateDagId(dagAction.getFlowGroup(), dagAction.getFlowName(), dagAction.getFlowExecutionId());
   }
 
-  public abstract DagProc host(DagTaskVisitor<DagProc> visitor);
+  public abstract DagProc host(DagTaskVisitor<DagProc> visitor, DagProcessingEngine dagProcessingEngine);
 
   /**
    * Currently, conclusion of {@link DagTask} marks and records a successful release of lease.

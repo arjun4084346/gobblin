@@ -37,7 +37,7 @@ import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
 import org.apache.gobblin.service.modules.orchestration.task.ReloadDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
@@ -55,8 +55,8 @@ public final class ReloadDagProc extends DagProc<ReloadDagTask> {
   private final ReloadDagTask reloadDagTask;
   private Dag<JobExecutionPlan> dagToReload;
 
-  public ReloadDagProc(ReloadDagTask launchDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public ReloadDagProc(ReloadDagTask launchDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.reloadDagTask = launchDagTask;
   }
 
@@ -70,7 +70,7 @@ public final class ReloadDagProc extends DagProc<ReloadDagTask> {
   @Override
   protected void act() {
     for (Dag.DagNode<JobExecutionPlan> dagNode : dagToReload.getStartNodes()) {
-      this.dagProcFactory.dagProcessingEngine.addAdvanceDagAction(dagNode);
+      this.dagProcessingEngine.addAdvanceDagAction(dagNode);
     }
   }
 

@@ -25,6 +25,7 @@ import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
 import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
@@ -51,7 +52,7 @@ public class AdvanceDagTask extends DagTask {
   }
 
   @Override
-  public DagProc host(DagTaskVisitor<DagProc> visitor) {
-    return visitor.meet(this);
+  public DagProc host(DagTaskVisitor<DagProc> visitor, DagProcessingEngine dagProcessingEngine) {
+    return visitor.meet(this, dagProcessingEngine);
   }
 }

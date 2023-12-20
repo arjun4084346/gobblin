@@ -86,8 +86,6 @@ public class DagManagerUtils {
     return createDagAction(flowGroup, flowName, flowExecutionId, flowActionType);
   }
 
-
-
   static FlowId getFlowId(DagNode<JobExecutionPlan> dagNode) {
     Config jobConfig = dagNode.getValue().getJobSpec().getConfig();
     String flowGroup = jobConfig.getString(ConfigurationKeys.FLOW_GROUP_KEY);
@@ -403,7 +401,8 @@ public class DagManagerUtils {
       throw new RuntimeException("Could not process requesters due to ", e);
     }
   }
-  public static void submitEventsAndSetStatus(Dag<JobExecutionPlan> dag, Optional<EventSubmitter> eventSubmitter) {
+
+  public static void submitInitializationEventsAndSetStatus(Dag<JobExecutionPlan> dag, Optional<EventSubmitter> eventSubmitter) {
     if (eventSubmitter.isPresent()) {
       for (DagNode<JobExecutionPlan> dagNode : dag.getNodes()) {
         JobExecutionPlan jobExecutionPlan = DagManagerUtils.getJobExecutionPlan(dagNode);

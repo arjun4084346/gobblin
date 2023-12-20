@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.task.CleanUpDagTask;
 
 
@@ -38,8 +38,8 @@ public class CleanUpDagProc extends DagProc {
 
   private CleanUpDagTask cleanUpDagTask;
 
-  public CleanUpDagProc(CleanUpDagTask cleanUpDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public CleanUpDagProc(CleanUpDagTask cleanUpDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.cleanUpDagTask = cleanUpDagTask;
   }
 

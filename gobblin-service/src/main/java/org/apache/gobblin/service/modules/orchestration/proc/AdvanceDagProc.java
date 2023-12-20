@@ -34,7 +34,7 @@ import org.apache.gobblin.runtime.api.Spec;
 import org.apache.gobblin.runtime.api.SpecProducer;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
 import org.apache.gobblin.service.modules.orchestration.task.AdvanceDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
@@ -56,8 +56,8 @@ public class AdvanceDagProc extends DagProc<AdvanceDagTask> {
   private Dag<JobExecutionPlan> dagToAdvance;
 
 
-  public AdvanceDagProc(AdvanceDagTask advanceDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public AdvanceDagProc(AdvanceDagTask advanceDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.advanceDagTask = advanceDagTask;
   }
 

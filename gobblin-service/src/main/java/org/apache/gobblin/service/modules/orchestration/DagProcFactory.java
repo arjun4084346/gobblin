@@ -53,14 +53,9 @@ import org.apache.gobblin.util.ConfigUtils;
 @Alpha
 @Slf4j
 public class DagProcFactory implements DagTaskVisitor {
-  public NewDagManager dagManager;
-  public final DagProcessingEngine dagProcessingEngine;
-
   Optional<EventSubmitter> eventSubmitter;
 
-  public DagProcFactory(NewDagManager dagManager, boolean instrumentationEnabled, DagProcessingEngine dagProcessingEngine) {
-    this.dagManager = dagManager;
-    this.dagProcessingEngine = dagProcessingEngine;
+  public DagProcFactory(boolean instrumentationEnabled) {
     if (instrumentationEnabled) {
       MetricContext metricContext = Instrumented.getMetricContext(ConfigUtils.configToState(ConfigFactory.empty()), getClass());
       this.eventSubmitter = Optional.of(new EventSubmitter.Builder(metricContext, "org.apache.gobblin.service").build());
@@ -70,38 +65,38 @@ public class DagProcFactory implements DagTaskVisitor {
   }
 
   @Override
-  public DagProc meet(LaunchDagTask launchDagTask) {
-    return new LaunchDagProc(launchDagTask, this);
+  public DagProc meet(LaunchDagTask launchDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new LaunchDagProc(launchDagTask, dagProcessingEngine);
   }
 
   @Override
-  public DagProc meet(KillDagTask killDagTask) {
-    return new KillDagProc(killDagTask, this);
+  public DagProc meet(KillDagTask killDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new KillDagProc(killDagTask, dagProcessingEngine);
   }
 
   @Override
-  public Object meet(ReloadDagTask reloadDagTask) {
-    return new ReloadDagProc(reloadDagTask, this);
+  public Object meet(ReloadDagTask reloadDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new ReloadDagProc(reloadDagTask, dagProcessingEngine);
   }
 
   @Override
-  public DagProc meet(ResumeDagTask resumeDagTask) {
-    return new ResumeDagProc(resumeDagTask, this);
+  public DagProc meet(ResumeDagTask resumeDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new ResumeDagProc(resumeDagTask, dagProcessingEngine);
   }
 
   @Override
-  public DagProc meet(RetryDagTask retryDagTask) {
-    return new RetryDagProc(retryDagTask, this);
+  public DagProc meet(RetryDagTask retryDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new RetryDagProc(retryDagTask, dagProcessingEngine);
   }
 
   @Override
-  public DagProc meet(AdvanceDagTask advanceDagTask) {
-    return new AdvanceDagProc(advanceDagTask, this);
+  public DagProc meet(AdvanceDagTask advanceDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new AdvanceDagProc(advanceDagTask, dagProcessingEngine);
   }
 
   @Override
-  public DagProc meet(CleanUpDagTask cleanUpDagTask) {
-    return new CleanUpDagProc(cleanUpDagTask, this);
+  public DagProc meet(CleanUpDagTask cleanUpDagTask, DagProcessingEngine dagProcessingEngine) {
+    return new CleanUpDagProc(cleanUpDagTask, dagProcessingEngine);
   }
 }
 

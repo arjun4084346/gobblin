@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.DagTaskVisitor;
 import org.apache.gobblin.service.modules.orchestration.proc.DagProc;
 
@@ -40,7 +41,7 @@ public class RetryDagTask extends DagTask {
   }
 
   @Override
-  public DagProc host(DagTaskVisitor<DagProc> visitor) {
-    return visitor.meet(this);
+  public DagProc host(DagTaskVisitor<DagProc> visitor, DagProcessingEngine dagProcessingEngine) {
+    return visitor.meet(this, dagProcessingEngine);
   }
 }

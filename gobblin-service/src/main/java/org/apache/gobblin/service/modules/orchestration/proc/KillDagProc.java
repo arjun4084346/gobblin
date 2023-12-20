@@ -34,7 +34,7 @@ import org.apache.gobblin.configuration.ConfigurationKeys;
 import org.apache.gobblin.metrics.event.TimingEvent;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
 import org.apache.gobblin.service.modules.orchestration.task.DagTask;
 import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
@@ -55,8 +55,8 @@ public final class KillDagProc extends DagProc<KillDagTask> {
   private final List<Dag.DagNode<JobExecutionPlan>> dagNodesToCancel = new ArrayList<>();
   private Dag<JobExecutionPlan> dagToCancel;
 
-  public KillDagProc(KillDagTask killDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public KillDagProc(KillDagTask killDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.killDagTask = killDagTask;
   }
 

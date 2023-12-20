@@ -31,7 +31,7 @@ import org.apache.gobblin.service.ExecutionStatus;
 import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.DagManager;
 import org.apache.gobblin.service.modules.orchestration.DagManagerUtils;
-import org.apache.gobblin.service.modules.orchestration.DagProcFactory;
+import org.apache.gobblin.service.modules.orchestration.DagProcessingEngine;
 import org.apache.gobblin.service.modules.orchestration.TimingEventUtils;
 import org.apache.gobblin.service.modules.orchestration.task.ResumeDagTask;
 import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
@@ -55,8 +55,8 @@ public final class ResumeDagProc extends DagProc {
   DagManager.DagId dagIdToResume;
 
 
-  public ResumeDagProc(ResumeDagTask resumeDagTask, DagProcFactory dagProcFactory) {
-    super(dagProcFactory);
+  public ResumeDagProc(ResumeDagTask resumeDagTask, DagProcessingEngine dagProcessingEngine) {
+    super(dagProcessingEngine);
     this.resumeDagTask = resumeDagTask;
   }
 

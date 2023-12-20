@@ -21,17 +21,15 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.gobblin.annotation.Alpha;
 import org.apache.gobblin.runtime.api.DagActionStore;
 import org.apache.gobblin.runtime.api.MultiActiveLeaseArbiter;
-import org.apache.gobblin.service.modules.flowgraph.Dag;
 import org.apache.gobblin.service.modules.orchestration.task.DagTask;
 import org.apache.gobblin.service.modules.orchestration.task.KillDagTask;
-import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
 
 /**
@@ -42,12 +40,10 @@ import org.apache.gobblin.service.modules.spec.JobExecutionPlan;
 
 @Alpha
 @Slf4j
-@AllArgsConstructor
 // change to iterable
 public class DagTaskStream implements Iterator<DagTask>{
-  private final BlockingQueue<DagActionStore.DagAction> dagActionQueue;
+  private final BlockingQueue<DagActionStore.DagAction> dagActionQueue = new LinkedBlockingQueue<>();
   //private FlowTriggerHandler flowTriggerHandler;
-  private final DagManagementStateStore dagManagementStateStore;
 
   @Override
   public boolean hasNext() {
@@ -78,12 +74,13 @@ public class DagTaskStream implements Iterator<DagTask>{
   private Properties getJobProperties(DagActionStore.DagAction dagAction) {
     String dagId = String.valueOf(
         DagManagerUtils.generateDagId(dagAction.getFlowGroup(), dagAction.getFlowName(), dagAction.getFlowExecutionId()));
-    Dag<JobExecutionPlan> dag = dagManagementStateStore.getDag(dagId);
-    if (dag != null) {
-      return dag.getStartNodes().get(0).getValue().getJobSpec().getConfigAsProperties();
-    } else {
-      throw new RuntimeException("DagAction " + dagAction + " does not exist in dag management state store");
-    }
+    return new Properties();
+// get required job props from dag action dagManagementStateStore.getDag(dagId);
+//    if (dag != null) {
+//      return dag.getStartNodes().get(0).getValue().getJobSpec().getConfigAsProperties();
+//    } else {
+//      throw new RuntimeException("DagAction " + dagAction + " does not exist in dag management state store");
+//    }
   }
 
   private DagTask createDagTask(DagActionStore.DagAction dagAction, MultiActiveLeaseArbiter.LeaseAttemptStatus leaseObtainedStatus) {
