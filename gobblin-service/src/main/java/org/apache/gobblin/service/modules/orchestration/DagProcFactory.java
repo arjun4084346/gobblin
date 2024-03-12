@@ -38,12 +38,13 @@ import org.apache.gobblin.service.modules.utils.FlowCompilationValidationHelper;
 @Singleton
 public class DagProcFactory implements DagTaskVisitor<DagProc> {
 
-  FlowCompilationValidationHelper flowCompilationValidationHelper;
+  private final FlowCompilationValidationHelper flowCompilationValidationHelper;
 
   @Inject
   public DagProcFactory(FlowCompilationValidationHelper flowCompilationValidationHelper) {
     this.flowCompilationValidationHelper = flowCompilationValidationHelper;
   }
+
   @Override
   public LaunchDagProc meet(LaunchDagTask launchDagTask) {
     return new LaunchDagProc(launchDagTask, this.flowCompilationValidationHelper);
